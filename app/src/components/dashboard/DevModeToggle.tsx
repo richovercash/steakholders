@@ -18,14 +18,11 @@ export function DevModeToggle({ currentType, organizationId }: DevModeToggleProp
   const [processorCount, setProcessorCount] = useState<number | null>(null)
   const router = useRouter()
   const supabase = createClient()
-
-  // Only show in development
-  if (process.env.NODE_ENV !== 'development') {
-    return null
-  }
+  const isDev = process.env.NODE_ENV === 'development'
 
   // Check processor count on mount
   useEffect(() => {
+    if (!isDev) return
     async function checkProcessors() {
       const { count } = await supabase
         .from('organizations')
@@ -35,7 +32,12 @@ export function DevModeToggle({ currentType, organizationId }: DevModeToggleProp
       setProcessorCount(count ?? 0)
     }
     checkProcessors()
-  }, [supabase])
+  }, [supabase, isDev])
+
+  // Only show in development
+  if (!isDev) {
+    return null
+  }
 
   const handleToggle = async () => {
     setLoading(true)

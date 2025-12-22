@@ -226,7 +226,7 @@ export default function OrderDetailPage({ params }: PageProps) {
                   {order.livestock.tag_number && ` #${order.livestock.tag_number}`}
                 </div>
                 {order.livestock.name && (
-                  <div className="text-gray-500">"{order.livestock.name}"</div>
+                  <div className="text-gray-500">&ldquo;{order.livestock.name}&rdquo;</div>
                 )}
                 {order.livestock.breed && (
                   <div className="text-sm text-gray-400">{order.livestock.breed}</div>

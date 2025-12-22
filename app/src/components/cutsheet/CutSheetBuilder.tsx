@@ -19,7 +19,6 @@ import {
   validateCutSheet,
   estimateTakeHomeWeight,
   type CutOption,
-  type ValidationError,
 } from '@/lib/cut-sheet-data'
 
 // Types for cut selections
@@ -107,7 +106,6 @@ export function CutSheetBuilder({ initialAnimalType, onSave, onCancel }: CutShee
     animalType: initialAnimalType || 'beef',
   })
   const [saving, setSaving] = useState(false)
-  const [activeSection, setActiveSection] = useState<string>('steaks')
 
   // Get cuts for current animal type
   const animalCuts = useMemo(() => CUT_DATA[state.animalType], [state.animalType])
@@ -312,7 +310,7 @@ export function CutSheetBuilder({ initialAnimalType, onSave, onCancel }: CutShee
           {(['beef', 'pork', 'lamb', 'goat'] as AnimalType[]).map(type => (
             <button
               key={type}
-              onClick={() => setState(prev => ({ ...DEFAULT_STATE, animalType: type }))}
+              onClick={() => setState({ ...DEFAULT_STATE, animalType: type })}
               className={`px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-all ${
                 state.animalType === type
                   ? 'bg-green-700 text-white'
