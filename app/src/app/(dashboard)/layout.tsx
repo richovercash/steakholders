@@ -48,6 +48,7 @@ export default async function DashboardLayout({
       <DevModeToggle
         currentType={profile.organization!.type}
         organizationId={profile.organization!.id}
+        userEmail={user.email}
       />
     </div>
   )

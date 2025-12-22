@@ -7,22 +7,30 @@ import { Button } from '@/components/ui/button'
 import { RefreshCw, Plus } from 'lucide-react'
 import type { OrganizationType } from '@/types/database'
 
+// Emails allowed to see dev mode (comma-separated env var or hardcoded)
+const DEV_MODE_USERS = process.env.NEXT_PUBLIC_DEV_MODE_USERS?.split(',') || []
+
 interface DevModeToggleProps {
   currentType: OrganizationType
   organizationId: string
+  userEmail?: string
 }
 
-export function DevModeToggle({ currentType, organizationId }: DevModeToggleProps) {
+export function DevModeToggle({ currentType, organizationId, userEmail }: DevModeToggleProps) {
   const [loading, setLoading] = useState(false)
   const [seedingProcessor, setSeedingProcessor] = useState(false)
   const [processorCount, setProcessorCount] = useState<number | null>(null)
   const router = useRouter()
   const supabase = createClient()
-  const isDev = process.env.NODE_ENV === 'development'
+
+  // Show dev mode in local development OR for allowed users in production
+  const isLocalDev = process.env.NODE_ENV === 'development'
+  const isAllowedUser = userEmail && DEV_MODE_USERS.includes(userEmail)
+  const showDevMode = isLocalDev || isAllowedUser
 
   // Check processor count on mount
   useEffect(() => {
-    if (!isDev) return
+    if (!showDevMode) return
     async function checkProcessors() {
       const { count } = await supabase
         .from('organizations')
@@ -32,10 +40,10 @@ export function DevModeToggle({ currentType, organizationId }: DevModeToggleProp
       setProcessorCount(count ?? 0)
     }
     checkProcessors()
-  }, [supabase, isDev])
+  }, [supabase, showDevMode])
 
-  // Only show in development
-  if (!isDev) {
+  // Only show for allowed users
+  if (!showDevMode) {
     return null
   }
 
