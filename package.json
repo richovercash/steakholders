@@ -1,0 +1,13 @@
+{
+  "name": "steakholders-landing",
+  "version": "1.0.0",
+  "description": "Connecting livestock producers with meat processors",
+  "private": true,
+  "scripts": {
+    "dev": "npx serve public",
+    "build": "echo 'Static site - no build needed'"
+  },
+  "keywords": ["livestock", "meat-processing", "farm", "b2b"],
+  "author": "Steakholders Team",
+  "license": "UNLICENSED"
+}

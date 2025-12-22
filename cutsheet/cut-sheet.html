@@ -1,0 +1,1425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cut Sheet Builder | Steakholders</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --forest: #1a3d2e;
+      --forest-light: #2d5a47;
+      --cream: #faf7f2;
+      --cream-dark: #f0ebe3;
+      --rust: #b85c38;
+      --rust-light: #d4845f;
+      --charcoal: #2c2c2c;
+      --sage: #8faa8f;
+      --warning: #e67e22;
+      --error: #c0392b;
+      --success: #27ae60;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--cream);
+      color: var(--charcoal);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+    
+    /* Header */
+    header {
+      background: var(--forest);
+      color: var(--cream);
+      padding: 20px 0;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .header-content {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .logo {
+      font-family: 'Fraunces', Georgia, serif;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--cream);
+      text-decoration: none;
+    }
+    
+    .logo span {
+      color: var(--rust-light);
+    }
+    
+    .order-info {
+      display: flex;
+      gap: 24px;
+      align-items: center;
+      font-size: 0.9rem;
+    }
+    
+    .order-info strong {
+      color: var(--sage);
+    }
+    
+    /* Main Layout */
+    .main-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 24px;
+      display: grid;
+      grid-template-columns: 280px 1fr 320px;
+      gap: 24px;
+    }
+    
+    /* Sidebar Navigation */
+    .sidebar {
+      position: sticky;
+      top: 100px;
+      height: fit-content;
+    }
+    
+    .nav-section {
+      background: white;
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      margin-bottom: 16px;
+    }
+    
+    .nav-section h3 {
+      font-family: 'Fraunces', serif;
+      font-size: 1rem;
+      color: var(--forest);
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--cream-dark);
+    }
+    
+    .animal-tabs {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .animal-tab {
+      padding: 12px 16px;
+      border: 2px solid var(--cream-dark);
+      border-radius: 10px;
+      background: white;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 500;
+    }
+    
+    .animal-tab:hover {
+      border-color: var(--forest);
+      background: var(--cream);
+    }
+    
+    .animal-tab.active {
+      border-color: var(--forest);
+      background: var(--forest);
+      color: white;
+    }
+    
+    .animal-tab .icon {
+      font-size: 1.5rem;
+    }
+    
+    .progress-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    
+    .progress-item {
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    
+    .progress-item:hover {
+      background: var(--cream);
+    }
+    
+    .progress-item.complete {
+      color: var(--success);
+    }
+    
+    .progress-item.active {
+      background: var(--cream);
+      font-weight: 600;
+    }
+    
+    .progress-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--cream-dark);
+      flex-shrink: 0;
+    }
+    
+    .progress-item.complete .progress-dot {
+      background: var(--success);
+    }
+    
+    .progress-item.active .progress-dot {
+      background: var(--rust);
+    }
+    
+    /* Main Content */
+    .content {
+      min-height: 600px;
+    }
+    
+    .section {
+      background: white;
+      border-radius: 20px;
+      padding: 32px;
+      margin-bottom: 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 24px;
+    }
+    
+    .section h2 {
+      font-family: 'Fraunces', serif;
+      font-size: 1.5rem;
+      color: var(--forest);
+    }
+    
+    .section-subtitle {
+      font-size: 0.95rem;
+      color: #666;
+      margin-top: 4px;
+    }
+    
+    .badge {
+      background: var(--cream);
+      color: var(--forest);
+      padding: 6px 12px;
+      border-radius: 100px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    
+    .badge.warning {
+      background: #fef3e2;
+      color: var(--warning);
+    }
+    
+    /* Cut Groups */
+    .cut-group {
+      margin-bottom: 32px;
+    }
+    
+    .cut-group-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid var(--cream-dark);
+    }
+    
+    .cut-group-header h3 {
+      font-size: 1.1rem;
+      color: var(--charcoal);
+    }
+    
+    .cut-group-icon {
+      width: 36px;
+      height: 36px;
+      background: var(--cream);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+    }
+    
+    /* Cut Items */
+    .cuts-grid {
+      display: grid;
+      gap: 12px;
+    }
+    
+    .cut-item {
+      display: grid;
+      grid-template-columns: 1fr auto auto auto;
+      gap: 16px;
+      align-items: center;
+      padding: 16px;
+      background: var(--cream);
+      border-radius: 12px;
+      border: 2px solid transparent;
+      transition: all 0.2s ease;
+    }
+    
+    .cut-item:hover {
+      background: white;
+      border-color: var(--cream-dark);
+    }
+    
+    .cut-item.selected {
+      background: white;
+      border-color: var(--forest);
+    }
+    
+    .cut-item.conflict {
+      background: #fef3e2;
+      border-color: var(--warning);
+    }
+    
+    .cut-name {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .cut-checkbox {
+      width: 22px;
+      height: 22px;
+      border: 2px solid var(--cream-dark);
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      background: white;
+    }
+    
+    .cut-checkbox.checked {
+      background: var(--forest);
+      border-color: var(--forest);
+      color: white;
+    }
+    
+    .cut-label {
+      font-weight: 500;
+    }
+    
+    .cut-hint {
+      font-size: 0.8rem;
+      color: #888;
+    }
+    
+    /* Input Fields */
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 100px;
+    }
+    
+    .input-group label {
+      font-size: 0.75rem;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    
+    .input-group select,
+    .input-group input {
+      padding: 8px 12px;
+      border: 2px solid var(--cream-dark);
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-family: inherit;
+      background: white;
+      transition: border-color 0.2s;
+    }
+    
+    .input-group select:focus,
+    .input-group input:focus {
+      outline: none;
+      border-color: var(--forest);
+    }
+    
+    .input-group input:disabled,
+    .input-group select:disabled {
+      background: var(--cream);
+      color: #aaa;
+      cursor: not-allowed;
+    }
+    
+    /* Organ Section */
+    .organs-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 12px;
+    }
+    
+    .organ-item {
+      padding: 16px;
+      background: var(--cream);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: all 0.2s;
+    }
+    
+    .organ-item:hover {
+      background: white;
+      border-color: var(--cream-dark);
+    }
+    
+    .organ-item.selected {
+      background: white;
+      border-color: var(--forest);
+    }
+    
+    /* Ground Meat Section */
+    .ground-options {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    
+    .ground-option {
+      padding: 20px;
+      background: var(--cream);
+      border-radius: 12px;
+      text-align: center;
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .ground-option:hover {
+      border-color: var(--cream-dark);
+    }
+    
+    .ground-option.selected {
+      background: white;
+      border-color: var(--forest);
+    }
+    
+    .ground-option .icon {
+      font-size: 2rem;
+      margin-bottom: 8px;
+    }
+    
+    .ground-option h4 {
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    
+    .ground-option p {
+      font-size: 0.85rem;
+      color: #888;
+    }
+    
+    /* Summary Panel */
+    .summary-panel {
+      position: sticky;
+      top: 100px;
+      height: fit-content;
+    }
+    
+    .summary-card {
+      background: white;
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      margin-bottom: 16px;
+    }
+    
+    .summary-card h3 {
+      font-family: 'Fraunces', serif;
+      font-size: 1.1rem;
+      color: var(--forest);
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--cream-dark);
+    }
+    
+    .summary-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      font-size: 0.9rem;
+    }
+    
+    .summary-item.total {
+      font-weight: 600;
+      font-size: 1rem;
+      padding-top: 12px;
+      margin-top: 8px;
+      border-top: 2px solid var(--cream-dark);
+    }
+    
+    .selected-cuts-list {
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    
+    .selected-cut {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--cream-dark);
+      font-size: 0.9rem;
+    }
+    
+    .selected-cut:last-child {
+      border-bottom: none;
+    }
+    
+    .selected-cut .cut-details {
+      font-size: 0.8rem;
+      color: #888;
+    }
+    
+    .remove-btn {
+      background: none;
+      border: none;
+      color: var(--error);
+      cursor: pointer;
+      font-size: 1.2rem;
+      padding: 4px;
+      opacity: 0.6;
+      transition: opacity 0.2s;
+    }
+    
+    .remove-btn:hover {
+      opacity: 1;
+    }
+    
+    /* Validation Messages */
+    .validation-messages {
+      margin-bottom: 16px;
+    }
+    
+    .validation-message {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      margin-bottom: 8px;
+    }
+    
+    .validation-message.warning {
+      background: #fef3e2;
+      color: #8a5a00;
+    }
+    
+    .validation-message.error {
+      background: #fdeaea;
+      color: var(--error);
+    }
+    
+    .validation-message.info {
+      background: #e8f4f8;
+      color: #0077b6;
+    }
+    
+    /* Action Buttons */
+    .action-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    
+    .btn {
+      padding: 16px 24px;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+      text-align: center;
+    }
+    
+    .btn-primary {
+      background: var(--rust);
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background: var(--rust-light);
+      transform: translateY(-2px);
+    }
+    
+    .btn-primary:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .btn-secondary {
+      background: var(--cream);
+      color: var(--charcoal);
+      border: 2px solid var(--cream-dark);
+    }
+    
+    .btn-secondary:hover {
+      border-color: var(--forest);
+    }
+    
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #888;
+    }
+    
+    .empty-state .icon {
+      font-size: 3rem;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+    
+    /* Conflict Warning */
+    .conflict-notice {
+      background: #fef3e2;
+      border: 2px solid var(--warning);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    
+    .conflict-notice .icon {
+      font-size: 1.5rem;
+    }
+    
+    .conflict-notice h4 {
+      color: var(--warning);
+      margin-bottom: 4px;
+    }
+    
+    .conflict-notice p {
+      font-size: 0.9rem;
+      color: #8a5a00;
+    }
+    
+    /* Responsive */
+    @media (max-width: 1200px) {
+      .main-container {
+        grid-template-columns: 1fr 320px;
+      }
+      
+      .sidebar {
+        display: none;
+      }
+    }
+    
+    @media (max-width: 900px) {
+      .main-container {
+        grid-template-columns: 1fr;
+      }
+      
+      .summary-panel {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 100;
+        padding: 16px;
+        background: white;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+        border-radius: 20px 20px 0 0;
+      }
+      
+      .summary-card {
+        margin-bottom: 0;
+        padding: 16px;
+        box-shadow: none;
+      }
+      
+      .selected-cuts-list {
+        display: none;
+      }
+      
+      .content {
+        padding-bottom: 200px;
+      }
+    }
+    
+    /* Animations */
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    .cut-item {
+      animation: slideIn 0.3s ease forwards;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-content">
+      <a href="index.html" class="logo">Steak<span>holders</span></a>
+      <div class="order-info">
+        <div><strong>Order:</strong> #2847</div>
+        <div><strong>Producer:</strong> Green Pastures Farm</div>
+        <div><strong>Hanging Weight:</strong> <span id="hangingWeight">642</span> lbs</div>
+      </div>
+    </div>
+  </header>
+
+  <div class="main-container">
+    <!-- Left Sidebar -->
+    <aside class="sidebar">
+      <div class="nav-section">
+        <h3>Animal Type</h3>
+        <div class="animal-tabs">
+          <button class="animal-tab active" data-animal="beef">
+            <span class="icon">🐄</span>
+            <span>Beef</span>
+          </button>
+          <button class="animal-tab" data-animal="pork">
+            <span class="icon">🐷</span>
+            <span>Pork</span>
+          </button>
+          <button class="animal-tab" data-animal="lamb">
+            <span class="icon">🐑</span>
+            <span>Lamb</span>
+          </button>
+          <button class="animal-tab" data-animal="goat">
+            <span class="icon">🐐</span>
+            <span>Goat</span>
+          </button>
+        </div>
+      </div>
+      
+      <div class="nav-section">
+        <h3>Sections</h3>
+        <div class="progress-nav">
+          <div class="progress-item active" data-section="steaks">
+            <span class="progress-dot"></span>
+            <span>Steaks</span>
+          </div>
+          <div class="progress-item" data-section="roasts">
+            <span class="progress-dot"></span>
+            <span>Roasts</span>
+          </div>
+          <div class="progress-item" data-section="ground">
+            <span class="progress-dot"></span>
+            <span>Ground & Other</span>
+          </div>
+          <div class="progress-item" data-section="organs">
+            <span class="progress-dot"></span>
+            <span>Organs & Extras</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="content" id="cutSheetContent">
+      <!-- Content dynamically generated by JavaScript -->
+    </main>
+
+    <!-- Right Sidebar - Summary -->
+    <aside class="summary-panel">
+      <div class="summary-card">
+        <h3>Order Summary</h3>
+        <div class="validation-messages" id="validationMessages"></div>
+        <div class="selected-cuts-list" id="selectedCutsList">
+          <div class="empty-state">
+            <div class="icon">📋</div>
+            <p>No cuts selected yet.<br>Start building your cut sheet!</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="summary-card">
+        <h3>Estimated Yield</h3>
+        <div class="summary-item">
+          <span>Hanging Weight</span>
+          <span><span id="summaryHangingWeight">642</span> lbs</span>
+        </div>
+        <div class="summary-item">
+          <span>Est. Take-Home</span>
+          <span>~<span id="estTakeHome">410</span> lbs</span>
+        </div>
+        <div class="summary-item">
+          <span>Cuts Selected</span>
+          <span id="cutsCount">0</span>
+        </div>
+        <div class="summary-item total">
+          <span>Completion</span>
+          <span id="completionPercent">0%</span>
+        </div>
+      </div>
+      
+      <div class="action-buttons">
+        <button class="btn btn-primary" id="submitBtn" disabled>
+          Submit Cut Sheet
+        </button>
+        <button class="btn btn-secondary" id="saveBtn">
+          Save as Template
+        </button>
+      </div>
+    </aside>
+  </div>
+
+  <script>
+    // Cut Sheet Data Model
+    const cutData = {
+      beef: {
+        steaks: [
+          { id: 'fillet', name: 'Fillet / Filet Mignon', hasThickness: true, conflictsWith: ['tbone'], hint: 'Premium tenderloin cut' },
+          { id: 'nystrip', name: 'NY Strip', hasThickness: true, conflictsWith: ['tbone'], hint: 'Classic steakhouse cut' },
+          { id: 'tbone', name: 'T-Bone Steak', hasThickness: true, conflictsWith: ['fillet', 'nystrip'], hint: 'Includes strip and tenderloin' },
+          { id: 'ribeye', name: 'Rib Eye Steak', hasThickness: true, hint: 'Well-marbled, flavorful' },
+          { id: 'sirloin', name: 'Sirloin Steak', hasThickness: true, hint: 'Lean and versatile' },
+          { id: 'round', name: 'Round Steak', hasThickness: true, hint: 'Great for swiss steak' },
+          { id: 'cubed', name: 'Cubed Steak', hasThickness: false, hint: 'Tenderized, good for chicken-fried steak' },
+          { id: 'flank', name: 'Flank Steak', hasThickness: false, hint: 'Great for fajitas' },
+          { id: 'skirt', name: 'Skirt Steak', hasThickness: false, hint: 'Ideal for grilling' },
+        ],
+        roasts: [
+          { id: 'chuck_roast', name: 'Chuck Roast', hasWeight: true, hint: 'Perfect for pot roast' },
+          { id: 'arm_roast', name: 'Arm Roast', hasWeight: true, hint: 'Similar to chuck, slightly leaner' },
+          { id: 'sirloin_roast', name: 'Sirloin Tip Roast', hasWeight: true, hint: 'Lean, good for roasting' },
+          { id: 'rump_roast', name: 'Rump Roast', hasWeight: true, hint: 'Flavorful, needs slow cooking' },
+          { id: 'round_roast', name: 'Round Roast', hasWeight: true, hint: 'Lean, slices well' },
+          { id: 'brisket', name: 'Brisket', hasWeight: true, hint: 'Great for smoking or braising' },
+          { id: 'prime_rib', name: 'Prime Rib / Rib Roast', hasWeight: true, hint: 'Premium holiday roast' },
+        ],
+        ground: [
+          { id: 'ground_beef', name: 'Ground Beef', type: 'bulk', hint: '1-2 lb packages' },
+          { id: 'ground_vac', name: 'Vacuum Packed Ground', type: 'bulk', hint: 'Longer freezer life' },
+          { id: 'patties', name: 'Burger Patties', type: 'patties', hint: '1/4 lb or 1/3 lb patties' },
+        ],
+        other: [
+          { id: 'stew', name: 'Stew Beef', hint: 'Cubed for stews and soups' },
+          { id: 'short_ribs', name: 'Short Ribs', hint: 'Great for braising' },
+          { id: 'soup_bones', name: 'Soup Bones', hint: 'For broth and stock' },
+        ],
+        organs: [
+          { id: 'liver', name: 'Liver' },
+          { id: 'heart', name: 'Heart' },
+          { id: 'tongue', name: 'Tongue' },
+          { id: 'kidneys', name: 'Kidneys' },
+          { id: 'oxtail', name: 'Oxtail' },
+          { id: 'bones', name: 'Bones (marrow/dog)' },
+        ]
+      },
+      pork: {
+        steaks: [
+          { id: 'tenderloin', name: 'Tenderloin', hasThickness: false, hint: 'Lean and tender' },
+          { id: 'chops', name: 'Pork Chops', hasThickness: true, hint: 'Bone-in or boneless' },
+          { id: 'country_ribs', name: 'Country Style Ribs', hasThickness: false, hint: 'Meaty and versatile' },
+        ],
+        roasts: [
+          { id: 'ham_roast', name: 'Ham (Roast)', hasWeight: true, hint: 'Whole or half' },
+          { id: 'ham_sliced', name: 'Ham (Sliced)', hasWeight: false, hint: 'Ham steaks' },
+          { id: 'shoulder_roast', name: 'Shoulder Roast', hasWeight: true, hint: 'Boston butt, great for pulled pork' },
+          { id: 'shoulder_sliced', name: 'Shoulder (Sliced)', hasWeight: false, hint: 'Shoulder steaks' },
+        ],
+        ribs: [
+          { id: 'baby_back', name: 'Baby Back Ribs', hint: 'Tender, quick cooking' },
+          { id: 'spare_ribs', name: 'Spare Ribs', hint: 'More meat, great for BBQ' },
+          { id: 'st_louis', name: 'St. Louis Style Ribs', hint: 'Trimmed spare ribs' },
+          { id: 'back_bones', name: 'Back Bones', hint: 'For seasoning and soups' },
+        ],
+        bacon: [
+          { id: 'bacon', name: 'Bacon', hint: 'Cured and smoked belly' },
+          { id: 'belly', name: 'Fresh Belly', hint: 'Uncured pork belly' },
+          { id: 'jowls', name: 'Jowls', hint: 'Similar to bacon' },
+          { id: 'fat_back', name: 'Fat Back', hint: 'For rendering or cooking' },
+          { id: 'lard', name: 'Fat for Lard', hint: 'Leaf fat for rendering' },
+        ],
+        sausage: [
+          { id: 'sausage_mild', name: 'Mild Sausage', hint: 'Traditional breakfast style' },
+          { id: 'sausage_medium', name: 'Medium Sausage', hint: 'Light kick' },
+          { id: 'sausage_hot', name: 'Hot Sausage', hint: 'Spicy' },
+          { id: 'sausage_italian', name: 'Sweet Italian', hint: 'Fennel and herbs' },
+          { id: 'sausage_chorizo', name: 'Chorizo', hint: 'Mexican style' },
+          { id: 'sausage_bratwurst', name: 'Bratwurst', hint: 'German style' },
+          { id: 'sausage_polish', name: 'Polish Sausage', hint: 'Kielbasa style' },
+        ],
+        organs: [
+          { id: 'liver', name: 'Liver' },
+          { id: 'heart', name: 'Heart' },
+          { id: 'kidneys', name: 'Kidneys' },
+        ]
+      },
+      lamb: {
+        steaks: [
+          { id: 'chops', name: 'Lamb Chops', hasThickness: true, hint: 'Rib or loin chops' },
+          { id: 'sirloin', name: 'Sirloin Chops', hasThickness: true, hint: 'Economical alternative' },
+        ],
+        roasts: [
+          { id: 'leg', name: 'Leg of Lamb', hasWeight: true, hint: 'Classic roast' },
+          { id: 'shoulder', name: 'Shoulder Roast', hasWeight: true, hint: 'Rich and flavorful' },
+          { id: 'rack', name: 'Rack of Lamb', hasWeight: false, hint: 'Elegant, premium cut' },
+          { id: 'shanks', name: 'Shanks', hasWeight: false, hint: 'Great for braising' },
+        ],
+        ground: [
+          { id: 'ground', name: 'Ground Lamb', type: 'bulk', hint: 'For burgers, kebabs' },
+          { id: 'stew', name: 'Stew Meat', type: 'stew', hint: 'Cubed for tagines, stews' },
+        ],
+        organs: [
+          { id: 'liver', name: 'Liver' },
+          { id: 'heart', name: 'Heart' },
+          { id: 'kidneys', name: 'Kidneys' },
+          { id: 'bones', name: 'Bones' },
+        ]
+      },
+      goat: {
+        steaks: [
+          { id: 'chops', name: 'Goat Chops', hasThickness: true, hint: 'Rib or loin chops' },
+        ],
+        roasts: [
+          { id: 'leg', name: 'Leg Roast', hasWeight: true, hint: 'Traditional for celebrations' },
+          { id: 'shoulder', name: 'Shoulder Roast', hasWeight: true, hint: 'Rich flavor' },
+          { id: 'shanks', name: 'Shanks', hasWeight: false, hint: 'For slow cooking' },
+        ],
+        ground: [
+          { id: 'ground', name: 'Ground Goat', type: 'bulk', hint: 'For curries, kebabs' },
+          { id: 'stew', name: 'Stew Meat', type: 'stew', hint: 'Cubed for curries' },
+        ],
+        organs: [
+          { id: 'liver', name: 'Liver' },
+          { id: 'heart', name: 'Heart' },
+          { id: 'kidneys', name: 'Kidneys' },
+          { id: 'bones', name: 'Bones' },
+        ]
+      }
+    };
+
+    const thicknessOptions = ['1/2"', '3/4"', '1"', '1 1/2"', '2"'];
+    const piecesOptions = [1, 2, 3, 4];
+    const weightOptions = ['2 lbs', '3 lbs', '4 lbs', '5 lbs'];
+
+    // State
+    let currentAnimal = 'beef';
+    let selectedCuts = {};
+    let hangingWeight = 642;
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      renderCutSheet();
+      setupEventListeners();
+    });
+
+    function setupEventListeners() {
+      // Animal tabs
+      document.querySelectorAll('.animal-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          document.querySelectorAll('.animal-tab').forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          currentAnimal = tab.dataset.animal;
+          renderCutSheet();
+        });
+      });
+
+      // Section navigation
+      document.querySelectorAll('.progress-item').forEach(item => {
+        item.addEventListener('click', () => {
+          const section = document.getElementById(item.dataset.section);
+          if (section) {
+            section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        });
+      });
+    }
+
+    function renderCutSheet() {
+      const content = document.getElementById('cutSheetContent');
+      const data = cutData[currentAnimal];
+      
+      let html = '';
+      
+      // Steaks Section
+      if (data.steaks && data.steaks.length > 0) {
+        html += renderSection('steaks', '🥩', 'Steaks', 'Select your preferred steak cuts and specifications', data.steaks, true);
+      }
+      
+      // Roasts Section
+      if (data.roasts && data.roasts.length > 0) {
+        html += renderSection('roasts', '🍖', 'Roasts', 'Choose roast sizes and quantities', data.roasts, false);
+      }
+      
+      // Ribs (Pork specific)
+      if (data.ribs && data.ribs.length > 0) {
+        html += renderSection('ribs', '🦴', 'Ribs', 'Select rib styles', data.ribs, false);
+      }
+      
+      // Bacon (Pork specific)
+      if (data.bacon && data.bacon.length > 0) {
+        html += renderSection('bacon', '🥓', 'Bacon & Belly', 'Cured and fresh options', data.bacon, false);
+      }
+      
+      // Sausage (Pork specific)
+      if (data.sausage && data.sausage.length > 0) {
+        html += renderSausageSection(data.sausage);
+      }
+      
+      // Ground & Other
+      if (data.ground || data.other) {
+        html += renderGroundSection(data.ground, data.other);
+      }
+      
+      // Organs
+      if (data.organs && data.organs.length > 0) {
+        html += renderOrgansSection(data.organs);
+      }
+      
+      content.innerHTML = html;
+      attachCutHandlers();
+      updateSummary();
+    }
+
+    function renderSection(id, icon, title, subtitle, cuts, isSteak) {
+      const conflictInfo = checkConflicts(cuts);
+      
+      let html = `
+        <section class="section" id="${id}">
+          <div class="section-header">
+            <div>
+              <h2>${icon} ${title}</h2>
+              <p class="section-subtitle">${subtitle}</p>
+            </div>
+            <span class="badge">${cuts.length} options</span>
+          </div>
+      `;
+      
+      if (conflictInfo.hasConflict) {
+        html += `
+          <div class="conflict-notice">
+            <span class="icon">⚠️</span>
+            <div>
+              <h4>Note: Conflicting Cuts</h4>
+              <p>T-Bone steaks include both NY Strip and Fillet sections. You can choose T-Bones OR the individual cuts, but not both.</p>
+            </div>
+          </div>
+        `;
+      }
+      
+      html += '<div class="cuts-grid">';
+      
+      cuts.forEach((cut, index) => {
+        const key = `${currentAnimal}_${cut.id}`;
+        const isSelected = selectedCuts[key];
+        const hasConflict = isSelected && conflictInfo.conflictingCuts.includes(cut.id);
+        
+        html += `
+          <div class="cut-item ${isSelected ? 'selected' : ''} ${hasConflict ? 'conflict' : ''}" 
+               data-cut-id="${cut.id}" 
+               style="animation-delay: ${index * 0.05}s">
+            <div class="cut-name">
+              <div class="cut-checkbox ${isSelected ? 'checked' : ''}" data-cut="${cut.id}">
+                ${isSelected ? '✓' : ''}
+              </div>
+              <div>
+                <div class="cut-label">${cut.name}</div>
+                ${cut.hint ? `<div class="cut-hint">${cut.hint}</div>` : ''}
+              </div>
+            </div>
+            
+            ${cut.hasThickness ? `
+              <div class="input-group">
+                <label>Thickness</label>
+                <select ${!isSelected ? 'disabled' : ''} data-field="thickness" data-cut="${cut.id}">
+                  ${thicknessOptions.map(t => `<option value="${t}" ${isSelected && selectedCuts[key].thickness === t ? 'selected' : ''}>${t}</option>`).join('')}
+                </select>
+              </div>
+            ` : ''}
+            
+            ${cut.hasWeight ? `
+              <div class="input-group">
+                <label>Size</label>
+                <select ${!isSelected ? 'disabled' : ''} data-field="weight" data-cut="${cut.id}">
+                  ${weightOptions.map(w => `<option value="${w}" ${isSelected && selectedCuts[key].weight === w ? 'selected' : ''}>${w}</option>`).join('')}
+                </select>
+              </div>
+            ` : ''}
+            
+            <div class="input-group">
+              <label>Per Pkg</label>
+              <select ${!isSelected ? 'disabled' : ''} data-field="pieces" data-cut="${cut.id}">
+                ${piecesOptions.map(p => `<option value="${p}" ${isSelected && selectedCuts[key].pieces === p ? 'selected' : ''}>${p}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+        `;
+      });
+      
+      html += '</div></section>';
+      return html;
+    }
+
+    function renderSausageSection(sausages) {
+      let html = `
+        <section class="section" id="sausage">
+          <div class="section-header">
+            <div>
+              <h2>🌭 Sausage</h2>
+              <p class="section-subtitle">Choose sausage flavors for your ground pork</p>
+            </div>
+            <span class="badge">${sausages.length} flavors</span>
+          </div>
+          
+          <div class="input-group" style="max-width: 200px; margin-bottom: 20px;">
+            <label>Total Sausage (lbs)</label>
+            <input type="number" id="sausageTotal" value="0" min="0" max="100" style="width: 100%;">
+          </div>
+          
+          <div class="cuts-grid">
+      `;
+      
+      sausages.forEach((sausage, index) => {
+        const key = `${currentAnimal}_${sausage.id}`;
+        const isSelected = selectedCuts[key];
+        
+        html += `
+          <div class="cut-item ${isSelected ? 'selected' : ''}" data-cut-id="${sausage.id}" style="animation-delay: ${index * 0.05}s">
+            <div class="cut-name">
+              <div class="cut-checkbox ${isSelected ? 'checked' : ''}" data-cut="${sausage.id}">
+                ${isSelected ? '✓' : ''}
+              </div>
+              <div>
+                <div class="cut-label">${sausage.name}</div>
+                ${sausage.hint ? `<div class="cut-hint">${sausage.hint}</div>` : ''}
+              </div>
+            </div>
+            
+            <div class="input-group">
+              <label>Pounds</label>
+              <input type="number" ${!isSelected ? 'disabled' : ''} 
+                     data-field="pounds" data-cut="${sausage.id}"
+                     value="${isSelected ? selectedCuts[key].pounds || 5 : 5}" 
+                     min="1" max="50" style="width: 80px;">
+            </div>
+          </div>
+        `;
+      });
+      
+      html += '</div></section>';
+      return html;
+    }
+
+    function renderGroundSection(ground, other) {
+      let html = `
+        <section class="section" id="ground">
+          <div class="section-header">
+            <div>
+              <h2>🍔 Ground Meat & Other</h2>
+              <p class="section-subtitle">How would you like the remaining trim processed?</p>
+            </div>
+          </div>
+          
+          <div class="ground-options">
+      `;
+      
+      if (ground) {
+        ground.forEach(item => {
+          const key = `${currentAnimal}_${item.id}`;
+          const isSelected = selectedCuts[key];
+          
+          html += `
+            <div class="ground-option ${isSelected ? 'selected' : ''}" data-cut="${item.id}">
+              <div class="icon">${item.type === 'patties' ? '🍔' : '📦'}</div>
+              <h4>${item.name}</h4>
+              <p>${item.hint}</p>
+            </div>
+          `;
+        });
+      }
+      
+      html += '</div>';
+      
+      if (other && other.length > 0) {
+        html += `
+          <div class="cut-group" style="margin-top: 32px;">
+            <div class="cut-group-header">
+              <div class="cut-group-icon">🦴</div>
+              <h3>Additional Cuts</h3>
+            </div>
+            <div class="cuts-grid">
+        `;
+        
+        other.forEach((item, index) => {
+          const key = `${currentAnimal}_${item.id}`;
+          const isSelected = selectedCuts[key];
+          
+          html += `
+            <div class="cut-item ${isSelected ? 'selected' : ''}" data-cut-id="${item.id}" style="animation-delay: ${index * 0.05}s">
+              <div class="cut-name">
+                <div class="cut-checkbox ${isSelected ? 'checked' : ''}" data-cut="${item.id}">
+                  ${isSelected ? '✓' : ''}
+                </div>
+                <div>
+                  <div class="cut-label">${item.name}</div>
+                  ${item.hint ? `<div class="cut-hint">${item.hint}</div>` : ''}
+                </div>
+              </div>
+              
+              <div class="input-group">
+                <label>Per Pkg</label>
+                <select ${!isSelected ? 'disabled' : ''} data-field="pieces" data-cut="${item.id}">
+                  ${piecesOptions.map(p => `<option value="${p}">${p}</option>`).join('')}
+                </select>
+              </div>
+            </div>
+          `;
+        });
+        
+        html += '</div></div>';
+      }
+      
+      html += '</section>';
+      return html;
+    }
+
+    function renderOrgansSection(organs) {
+      let html = `
+        <section class="section" id="organs">
+          <div class="section-header">
+            <div>
+              <h2>🫀 Organs & Extras</h2>
+              <p class="section-subtitle">Would you like to keep any of the following?</p>
+            </div>
+          </div>
+          
+          <div class="organs-grid">
+      `;
+      
+      organs.forEach(organ => {
+        const key = `${currentAnimal}_${organ.id}`;
+        const isSelected = selectedCuts[key];
+        
+        html += `
+          <div class="organ-item ${isSelected ? 'selected' : ''}" data-cut="${organ.id}">
+            <div class="cut-checkbox ${isSelected ? 'checked' : ''}" data-cut="${organ.id}">
+              ${isSelected ? '✓' : ''}
+            </div>
+            <span>${organ.name}</span>
+          </div>
+        `;
+      });
+      
+      html += '</div></section>';
+      return html;
+    }
+
+    function checkConflicts(cuts) {
+      const selectedIds = Object.keys(selectedCuts)
+        .filter(k => k.startsWith(currentAnimal + '_'))
+        .map(k => k.replace(currentAnimal + '_', ''));
+      
+      let conflictingCuts = [];
+      
+      cuts.forEach(cut => {
+        if (cut.conflictsWith && selectedIds.includes(cut.id)) {
+          cut.conflictsWith.forEach(conflict => {
+            if (selectedIds.includes(conflict)) {
+              conflictingCuts.push(cut.id, conflict);
+            }
+          });
+        }
+      });
+      
+      return {
+        hasConflict: conflictingCuts.length > 0,
+        conflictingCuts: [...new Set(conflictingCuts)]
+      };
+    }
+
+    function attachCutHandlers() {
+      // Checkbox clicks
+      document.querySelectorAll('.cut-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('click', (e) => {
+          e.stopPropagation();
+          toggleCut(checkbox.dataset.cut);
+        });
+      });
+      
+      // Cut item clicks (for the whole row)
+      document.querySelectorAll('.cut-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+          if (e.target.tagName !== 'SELECT' && e.target.tagName !== 'INPUT') {
+            const cutId = item.dataset.cutId;
+            if (cutId) toggleCut(cutId);
+          }
+        });
+      });
+      
+      // Organ item clicks
+      document.querySelectorAll('.organ-item').forEach(item => {
+        item.addEventListener('click', () => {
+          toggleCut(item.dataset.cut);
+        });
+      });
+      
+      // Ground option clicks
+      document.querySelectorAll('.ground-option').forEach(option => {
+        option.addEventListener('click', () => {
+          toggleCut(option.dataset.cut);
+        });
+      });
+      
+      // Input changes
+      document.querySelectorAll('select[data-field], input[data-field]').forEach(input => {
+        input.addEventListener('change', (e) => {
+          const key = `${currentAnimal}_${input.dataset.cut}`;
+          if (selectedCuts[key]) {
+            selectedCuts[key][input.dataset.field] = e.target.value;
+            updateSummary();
+          }
+        });
+      });
+    }
+
+    function toggleCut(cutId) {
+      const key = `${currentAnimal}_${cutId}`;
+      
+      if (selectedCuts[key]) {
+        delete selectedCuts[key];
+      } else {
+        selectedCuts[key] = {
+          animal: currentAnimal,
+          cutId: cutId,
+          name: getCutName(cutId),
+          thickness: '1"',
+          weight: '3 lbs',
+          pieces: 2,
+          pounds: 5
+        };
+      }
+      
+      renderCutSheet();
+    }
+
+    function getCutName(cutId) {
+      const data = cutData[currentAnimal];
+      for (const category of Object.values(data)) {
+        if (Array.isArray(category)) {
+          const cut = category.find(c => c.id === cutId);
+          if (cut) return cut.name;
+        }
+      }
+      return cutId;
+    }
+
+    function updateSummary() {
+      const listEl = document.getElementById('selectedCutsList');
+      const countEl = document.getElementById('cutsCount');
+      const completionEl = document.getElementById('completionPercent');
+      const submitBtn = document.getElementById('submitBtn');
+      const validationEl = document.getElementById('validationMessages');
+      
+      const entries = Object.entries(selectedCuts);
+      countEl.textContent = entries.length;
+      
+      // Calculate completion
+      const totalPossible = 10; // Rough estimate of typical selections
+      const completion = Math.min(100, Math.round((entries.length / totalPossible) * 100));
+      completionEl.textContent = completion + '%';
+      
+      // Enable/disable submit
+      submitBtn.disabled = entries.length === 0;
+      
+      // Check for conflicts
+      let validationHtml = '';
+      const conflicts = checkConflicts(cutData[currentAnimal].steaks || []);
+      if (conflicts.hasConflict) {
+        validationHtml += `
+          <div class="validation-message warning">
+            <span>⚠️</span>
+            <span>You have conflicting cuts selected. T-Bone includes NY Strip and Fillet sections.</span>
+          </div>
+        `;
+      }
+      validationEl.innerHTML = validationHtml;
+      
+      // Render selected cuts
+      if (entries.length === 0) {
+        listEl.innerHTML = `
+          <div class="empty-state">
+            <div class="icon">📋</div>
+            <p>No cuts selected yet.<br>Start building your cut sheet!</p>
+          </div>
+        `;
+        return;
+      }
+      
+      let html = '';
+      entries.forEach(([key, cut]) => {
+        let details = [];
+        if (cut.thickness && cut.thickness !== '1"') details.push(cut.thickness);
+        if (cut.weight) details.push(cut.weight);
+        if (cut.pieces) details.push(`${cut.pieces}/pkg`);
+        if (cut.pounds) details.push(`${cut.pounds} lbs`);
+        
+        html += `
+          <div class="selected-cut">
+            <div>
+              <div>${cut.name}</div>
+              ${details.length > 0 ? `<div class="cut-details">${details.join(' • ')}</div>` : ''}
+            </div>
+            <button class="remove-btn" data-key="${key}">×</button>
+          </div>
+        `;
+      });
+      
+      listEl.innerHTML = html;
+      
+      // Attach remove handlers
+      listEl.querySelectorAll('.remove-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          delete selectedCuts[btn.dataset.key];
+          renderCutSheet();
+        });
+      });
+    }
+  </script>
+</body>
+</html>

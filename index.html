@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Steakholders | Connecting Farmers & Processors</title>
+  <meta name="description" content="The platform that bridges livestock producers and meat processors. Streamline scheduling, cut sheets, and order tracking.">
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --forest: #1a3d2e;
+      --forest-light: #2d5a47;
+      --cream: #faf7f2;
+      --cream-dark: #f0ebe3;
+      --rust: #b85c38;
+      --rust-light: #d4845f;
+      --charcoal: #2c2c2c;
+      --sage: #8faa8f;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    html {
+      scroll-behavior: smooth;
+    }
+    
+    body {
+      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--cream);
+      color: var(--charcoal);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+    
+    /* Grain overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      opacity: 0.03;
+      z-index: 1000;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+    
+    /* Navigation */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      padding: 20px 0;
+      z-index: 100;
+      transition: all 0.3s ease;
+    }
+    
+    nav.scrolled {
+      background: rgba(250, 247, 242, 0.95);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 2px 20px rgba(0,0,0,0.05);
+    }
+    
+    nav .container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .logo {
+      font-family: 'Fraunces', Georgia, serif;
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: var(--forest);
+      text-decoration: none;
+      letter-spacing: -0.02em;
+    }
+    
+    .logo span {
+      color: var(--rust);
+    }
+    
+    .nav-cta {
+      background: var(--forest);
+      color: var(--cream);
+      padding: 12px 24px;
+      border-radius: 100px;
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 0.9rem;
+      transition: all 0.3s ease;
+    }
+    
+    .nav-cta:hover {
+      background: var(--forest-light);
+      transform: translateY(-2px);
+    }
+    
+    /* Hero Section */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      position: relative;
+      padding: 120px 0 80px;
+      overflow: hidden;
+    }
+    
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 80%;
+      height: 150%;
+      background: radial-gradient(ellipse at center, var(--cream-dark) 0%, transparent 70%);
+      z-index: -1;
+    }
+    
+    .hero-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      align-items: center;
+    }
+    
+    .hero-text h1 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-size: clamp(2.5rem, 5vw, 4rem);
+      font-weight: 700;
+      line-height: 1.1;
+      color: var(--forest);
+      margin-bottom: 24px;
+      letter-spacing: -0.03em;
+    }
+    
+    .hero-text h1 em {
+      font-style: italic;
+      color: var(--rust);
+    }
+    
+    .hero-text p {
+      font-size: 1.2rem;
+      color: var(--charcoal);
+      opacity: 0.8;
+      margin-bottom: 40px;
+      max-width: 480px;
+    }
+    
+    /* Waitlist Form */
+    .waitlist-form {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    
+    .waitlist-form input {
+      flex: 1;
+      min-width: 240px;
+      padding: 16px 24px;
+      border: 2px solid var(--cream-dark);
+      border-radius: 100px;
+      font-size: 1rem;
+      font-family: inherit;
+      background: white;
+      transition: all 0.3s ease;
+    }
+    
+    .waitlist-form input:focus {
+      outline: none;
+      border-color: var(--forest);
+    }
+    
+    .waitlist-form button {
+      padding: 16px 32px;
+      background: var(--rust);
+      color: white;
+      border: none;
+      border-radius: 100px;
+      font-size: 1rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .waitlist-form button:hover {
+      background: var(--rust-light);
+      transform: translateY(-2px);
+    }
+    
+    .form-note {
+      font-size: 0.85rem;
+      color: var(--charcoal);
+      opacity: 0.6;
+      margin-top: 16px;
+    }
+    
+    /* Hero Visual */
+    .hero-visual {
+      position: relative;
+    }
+    
+    .hero-card {
+      background: white;
+      border-radius: 24px;
+      padding: 32px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.08);
+      position: relative;
+      z-index: 2;
+    }
+    
+    .hero-card::before {
+      content: '';
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      right: -20px;
+      bottom: -20px;
+      background: var(--sage);
+      opacity: 0.3;
+      border-radius: 24px;
+      z-index: -1;
+    }
+    
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--cream-dark);
+    }
+    
+    .card-header h3 {
+      font-family: 'Fraunces', serif;
+      font-size: 1.25rem;
+      color: var(--forest);
+    }
+    
+    .status-badge {
+      background: #e8f5e9;
+      color: #2e7d32;
+      padding: 6px 14px;
+      border-radius: 100px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    
+    .order-progress {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    
+    .progress-step {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    
+    .step-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      flex-shrink: 0;
+    }
+    
+    .step-icon.complete {
+      background: var(--forest);
+      color: white;
+    }
+    
+    .step-icon.active {
+      background: var(--rust);
+      color: white;
+      animation: pulse 2s infinite;
+    }
+    
+    .step-icon.pending {
+      background: var(--cream-dark);
+      color: var(--charcoal);
+      opacity: 0.5;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(184, 92, 56, 0.4); }
+      50% { box-shadow: 0 0 0 10px rgba(184, 92, 56, 0); }
+    }
+    
+    .step-info h4 {
+      font-weight: 600;
+      font-size: 0.95rem;
+      margin-bottom: 2px;
+    }
+    
+    .step-info p {
+      font-size: 0.85rem;
+      opacity: 0.6;
+    }
+    
+    /* Problem Section */
+    .problem-section {
+      padding: 120px 0;
+      background: var(--forest);
+      color: var(--cream);
+      position: relative;
+    }
+    
+    .problem-section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 100px;
+      background: linear-gradient(to bottom right, var(--cream) 49%, transparent 51%);
+    }
+    
+    .section-label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--sage);
+      margin-bottom: 16px;
+    }
+    
+    .problem-section h2 {
+      font-family: 'Fraunces', serif;
+      font-size: clamp(2rem, 4vw, 3rem);
+      font-weight: 600;
+      line-height: 1.2;
+      margin-bottom: 60px;
+      max-width: 700px;
+    }
+    
+    .problems-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 32px;
+    }
+    
+    .problem-card {
+      background: rgba(255,255,255,0.05);
+      border-radius: 16px;
+      padding: 32px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .problem-card .icon {
+      font-size: 2.5rem;
+      margin-bottom: 20px;
+    }
+    
+    .problem-card h3 {
+      font-family: 'Fraunces', serif;
+      font-size: 1.25rem;
+      margin-bottom: 12px;
+    }
+    
+    .problem-card p {
+      opacity: 0.8;
+      line-height: 1.7;
+    }
+    
+    /* Solution Section */
+    .solution-section {
+      padding: 120px 0;
+      position: relative;
+    }
+    
+    .solution-section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 100px;
+      background: linear-gradient(to bottom left, var(--forest) 49%, transparent 51%);
+    }
+    
+    .solution-header {
+      text-align: center;
+      max-width: 600px;
+      margin: 0 auto 80px;
+    }
+    
+    .solution-header h2 {
+      font-family: 'Fraunces', serif;
+      font-size: clamp(2rem, 4vw, 3rem);
+      color: var(--forest);
+      margin-bottom: 20px;
+    }
+    
+    .solution-header p {
+      font-size: 1.1rem;
+      opacity: 0.7;
+    }
+    
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+    
+    .feature-card {
+      background: white;
+      border-radius: 20px;
+      padding: 40px 32px;
+      text-align: center;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+      transition: all 0.3s ease;
+      border: 1px solid var(--cream-dark);
+    }
+    
+    .feature-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.08);
+    }
+    
+    .feature-icon {
+      width: 72px;
+      height: 72px;
+      margin: 0 auto 24px;
+      background: var(--cream);
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+    }
+    
+    .feature-card h3 {
+      font-family: 'Fraunces', serif;
+      font-size: 1.25rem;
+      color: var(--forest);
+      margin-bottom: 12px;
+    }
+    
+    .feature-card p {
+      font-size: 0.95rem;
+      opacity: 0.7;
+      line-height: 1.6;
+    }
+    
+    /* Audience Section */
+    .audience-section {
+      padding: 100px 0;
+      background: var(--cream-dark);
+    }
+    
+    .audience-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+    }
+    
+    .audience-card {
+      background: white;
+      border-radius: 24px;
+      padding: 48px;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .audience-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 6px;
+      height: 100%;
+    }
+    
+    .audience-card.producer::before {
+      background: var(--forest);
+    }
+    
+    .audience-card.processor::before {
+      background: var(--rust);
+    }
+    
+    .audience-card h3 {
+      font-family: 'Fraunces', serif;
+      font-size: 1.75rem;
+      margin-bottom: 8px;
+    }
+    
+    .audience-card.producer h3 {
+      color: var(--forest);
+    }
+    
+    .audience-card.processor h3 {
+      color: var(--rust);
+    }
+    
+    .audience-card .subtitle {
+      font-size: 1rem;
+      opacity: 0.6;
+      margin-bottom: 24px;
+    }
+    
+    .benefit-list {
+      list-style: none;
+    }
+    
+    .benefit-list li {
+      padding: 12px 0;
+      padding-left: 32px;
+      position: relative;
+      border-bottom: 1px solid var(--cream-dark);
+    }
+    
+    .benefit-list li:last-child {
+      border-bottom: none;
+    }
+    
+    .benefit-list li::before {
+      content: '✓';
+      position: absolute;
+      left: 0;
+      font-weight: bold;
+    }
+    
+    .audience-card.producer .benefit-list li::before {
+      color: var(--forest);
+    }
+    
+    .audience-card.processor .benefit-list li::before {
+      color: var(--rust);
+    }
+    
+    /* CTA Section */
+    .cta-section {
+      padding: 120px 0;
+      text-align: center;
+    }
+    
+    .cta-section h2 {
+      font-family: 'Fraunces', serif;
+      font-size: clamp(2rem, 4vw, 3rem);
+      color: var(--forest);
+      margin-bottom: 20px;
+    }
+    
+    .cta-section p {
+      font-size: 1.1rem;
+      opacity: 0.7;
+      margin-bottom: 40px;
+      max-width: 500px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    
+    .cta-form {
+      max-width: 500px;
+      margin: 0 auto;
+    }
+    
+    .cta-form .waitlist-form {
+      justify-content: center;
+    }
+    
+    /* Footer */
+    footer {
+      background: var(--charcoal);
+      color: var(--cream);
+      padding: 60px 0 40px;
+    }
+    
+    .footer-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 24px;
+    }
+    
+    .footer-logo {
+      font-family: 'Fraunces', serif;
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+    
+    .footer-logo span {
+      color: var(--rust-light);
+    }
+    
+    .footer-links {
+      display: flex;
+      gap: 32px;
+    }
+    
+    .footer-links a {
+      color: var(--cream);
+      text-decoration: none;
+      opacity: 0.7;
+      transition: opacity 0.3s ease;
+    }
+    
+    .footer-links a:hover {
+      opacity: 1;
+    }
+    
+    .footer-copy {
+      width: 100%;
+      text-align: center;
+      padding-top: 40px;
+      margin-top: 40px;
+      border-top: 1px solid rgba(255,255,255,0.1);
+      opacity: 0.5;
+      font-size: 0.9rem;
+    }
+    
+    /* Success Message */
+    .success-message {
+      display: none;
+      background: #e8f5e9;
+      color: #2e7d32;
+      padding: 16px 24px;
+      border-radius: 100px;
+      font-weight: 500;
+      animation: fadeIn 0.5s ease;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    /* Responsive */
+    @media (max-width: 968px) {
+      .hero-content {
+        grid-template-columns: 1fr;
+        gap: 60px;
+      }
+      
+      .hero-visual {
+        order: -1;
+      }
+      
+      .features-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .audience-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    @media (max-width: 600px) {
+      .hero {
+        padding: 100px 0 60px;
+      }
+      
+      .nav-cta {
+        display: none;
+      }
+      
+      .waitlist-form {
+        flex-direction: column;
+      }
+      
+      .waitlist-form input {
+        min-width: 100%;
+      }
+      
+      .footer-content {
+        flex-direction: column;
+        text-align: center;
+      }
+      
+      .footer-links {
+        flex-direction: column;
+        gap: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <nav id="navbar">
+    <div class="container">
+      <a href="#" class="logo">Steak<span>holders</span></a>
+      <a href="#waitlist" class="nav-cta">Join Waitlist</a>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="container">
+      <div class="hero-content">
+        <div class="hero-text">
+          <h1>From pasture to processor, <em>finally connected.</em></h1>
+          <p>The platform that bridges livestock producers and meat processors. Streamline scheduling, cut sheets, and order tracking—all in one place.</p>
+          <form class="waitlist-form" id="hero-form">
+            <input type="email" placeholder="Enter your email" required>
+            <button type="submit">Get Early Access</button>
+          </form>
+          <p class="form-note">Join 50+ farmers and processors already on our waitlist.</p>
+          <div class="success-message" id="hero-success">
+            🎉 You're on the list! We'll be in touch soon.
+          </div>
+        </div>
+        
+        <div class="hero-visual">
+          <div class="hero-card">
+            <div class="card-header">
+              <h3>Order #2847</h3>
+              <span class="status-badge">In Progress</span>
+            </div>
+            <div class="order-progress">
+              <div class="progress-step">
+                <div class="step-icon complete">✓</div>
+                <div class="step-info">
+                  <h4>Dropped Off</h4>
+                  <p>Dec 18, 2025 · 8:30 AM</p>
+                </div>
+              </div>
+              <div class="progress-step">
+                <div class="step-icon complete">✓</div>
+                <div class="step-info">
+                  <h4>Hanging Weight</h4>
+                  <p>642 lbs · Recorded Dec 19</p>
+                </div>
+              </div>
+              <div class="progress-step">
+                <div class="step-icon active">⚡</div>
+                <div class="step-info">
+                  <h4>Cutting</h4>
+                  <p>Est. completion: Dec 22</p>
+                </div>
+              </div>
+              <div class="progress-step">
+                <div class="step-icon pending">❄</div>
+                <div class="step-info">
+                  <h4>Ready for Pickup</h4>
+                  <p>We'll notify you</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="problem-section">
+    <div class="container">
+      <span class="section-label">The Problem</span>
+      <h2>Small-scale meat processing is broken. Here's what we're fixing.</h2>
+      
+      <div class="problems-grid">
+        <div class="problem-card">
+          <div class="icon">📋</div>
+          <h3>Paper Cut Sheets</h3>
+          <p>Confusing forms, unclear options, and no validation. Even experienced farmers struggle to fill them out correctly.</p>
+        </div>
+        <div class="problem-card">
+          <div class="icon">📞</div>
+          <h3>Phone Tag & Voicemail</h3>
+          <p>Want to know when your animal will be ready? Good luck reaching anyone. Processors are too busy working to answer calls.</p>
+        </div>
+        <div class="problem-card">
+          <div class="icon">📅</div>
+          <h3>Scheduling Chaos</h3>
+          <p>Wait times of 6+ months. Cancellations mean scrambling to fill slots. No visibility into availability.</p>
+        </div>
+        <div class="problem-card">
+          <div class="icon">🔍</div>
+          <h3>Zero Visibility</h3>
+          <p>Once your animal is dropped off, it vanishes into a black hole. Where is it? When will it be done? Nobody knows.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="solution-section">
+    <div class="container">
+      <div class="solution-header">
+        <span class="section-label">The Solution</span>
+        <h2>Modern tools for an age-old trade</h2>
+        <p>Steakholders brings the livestock processing workflow into the digital age—without losing the personal touch.</p>
+      </div>
+      
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">🗓️</div>
+          <h3>Smart Scheduling</h3>
+          <p>See real-time availability. Book slots instantly. Automatic waitlist management when dates fill up.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🥩</div>
+          <h3>Visual Cut Sheets</h3>
+          <p>Interactive animal diagrams guide you through every cut. No more confusion. No more errors.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📍</div>
+          <h3>Live Tracking</h3>
+          <p>Know exactly where your order is—from drop-off through hanging, cutting, wrapping, and pickup.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">💬</div>
+          <h3>Direct Messaging</h3>
+          <p>Skip the phone tag. Message your processor directly with questions, changes, or special requests.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🔔</div>
+          <h3>Smart Notifications</h3>
+          <p>Get alerts when your order moves to a new stage, when pickup is ready, or when slots open up.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📊</div>
+          <h3>Order History</h3>
+          <p>Every order documented. Weights, cuts, dates, costs—all searchable and exportable forever.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="audience-section">
+    <div class="container">
+      <div class="audience-grid">
+        <div class="audience-card producer">
+          <h3>For Producers</h3>
+          <p class="subtitle">Farmers, ranchers, and livestock raisers</p>
+          <ul class="benefit-list">
+            <li>Find USDA-inspected processors in your area</li>
+            <li>Schedule drop-offs months in advance</li>
+            <li>Build cut sheets with visual guidance</li>
+            <li>Track your animals through processing</li>
+            <li>Get notified when orders are ready</li>
+            <li>Access complete order history anytime</li>
+          </ul>
+        </div>
+        <div class="audience-card processor">
+          <h3>For Processors</h3>
+          <p class="subtitle">Butchers, slaughterhouses, and meat lockers</p>
+          <ul class="benefit-list">
+            <li>Manage your calendar and capacity</li>
+            <li>Receive digital cut sheets (no more faxes)</li>
+            <li>Update order status with one tap</li>
+            <li>Auto-fill slots from your waitlist</li>
+            <li>Reduce phone calls and interruptions</li>
+            <li>Keep customers informed automatically</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta-section" id="waitlist">
+    <div class="container">
+      <h2>Ready to modernize your workflow?</h2>
+      <p>Join our early access list. We're building this with producers and processors—your input shapes what we create.</p>
+      <div class="cta-form">
+        <form class="waitlist-form" id="cta-form">
+          <input type="email" placeholder="Enter your email" required>
+          <button type="submit">Join Waitlist</button>
+        </form>
+        <div class="success-message" id="cta-success">
+          🎉 You're on the list! We'll be in touch soon.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-logo">Steak<span>holders</span></div>
+        <div class="footer-links">
+          <a href="mailto:hello@steakholders.us">Contact</a>
+          <a href="#">Privacy</a>
+          <a href="#">Terms</a>
+        </div>
+        <p class="footer-copy">© 2025 Steakholders. Built for the farmers and butchers who feed us.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Navbar scroll effect
+    const navbar = document.getElementById('navbar');
+    window.addEventListener('scroll', () => {
+      if (window.scrollY > 50) {
+        navbar.classList.add('scrolled');
+      } else {
+        navbar.classList.remove('scrolled');
+      }
+    });
+
+    // Form handling
+    function handleSubmit(formId, successId) {
+      const form = document.getElementById(formId);
+      const success = document.getElementById(successId);
+      
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const email = form.querySelector('input[type="email"]').value;
+        
+        // In production, this would send to your backend/Supabase
+        console.log('Waitlist signup:', email);
+        
+        // Store in localStorage for now (replace with API call)
+        const waitlist = JSON.parse(localStorage.getItem('steakholders_waitlist') || '[]');
+        if (!waitlist.includes(email)) {
+          waitlist.push(email);
+          localStorage.setItem('steakholders_waitlist', JSON.stringify(waitlist));
+        }
+        
+        // Show success message
+        form.style.display = 'none';
+        success.style.display = 'block';
+      });
+    }
+
+    handleSubmit('hero-form', 'hero-success');
+    handleSubmit('cta-form', 'cta-success');
+
+    // Smooth scroll for anchor links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    });
+  </script>
+</body>
+</html>
