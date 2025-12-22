@@ -80,7 +80,7 @@ export default function NewOrderPage() {
         .from('livestock')
         .select('id, animal_type, tag_number, name, status')
         .eq('producer_id', profile.organization_id)
-        .eq('status', 'on_farm')
+        .eq('status', 'on_farm') as { data: Livestock[] | null }
 
       if (livestockData) {
         setLivestock(livestockData)
@@ -91,7 +91,7 @@ export default function NewOrderPage() {
         .from('organizations')
         .select('id, name, city, state, services_offered')
         .eq('type', 'processor')
-        .eq('is_active', true)
+        .eq('is_active', true) as { data: Processor[] | null }
 
       if (processorData) {
         setProcessors(processorData)
@@ -141,10 +141,10 @@ export default function NewOrderPage() {
         .from('processing_orders')
         .insert(orderData as never)
         .select('id')
-        .single()
+        .single() as { data: { id: string } | null; error: Error | null }
 
-      if (insertError) {
-        setError(insertError.message)
+      if (insertError || !newOrder) {
+        setError(insertError?.message || 'Failed to create order')
         return
       }
 
