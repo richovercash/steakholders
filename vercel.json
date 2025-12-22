@@ -1,8 +1,6 @@
 {
-  "buildCommand": null,
-  "outputDirectory": "public",
-  "framework": null,
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
-  ]
+  "buildCommand": "cd app && npm run build",
+  "installCommand": "cd app && npm install",
+  "framework": "nextjs",
+  "outputDirectory": "app/.next"
 }
