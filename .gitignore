@@ -11,6 +11,9 @@ build/
 
 # Testing
 coverage/
+playwright-report/
+playwright/.auth/
+test-results/
 
 # Environment files
 .env
