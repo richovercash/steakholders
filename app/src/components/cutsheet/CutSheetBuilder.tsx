@@ -5,7 +5,22 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Check, AlertTriangle } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Check, AlertTriangle, Save, FolderOpen, ChevronDown } from 'lucide-react'
 import type { AnimalType, CutCategory, SausageFlavor, GroundType, PattySize } from '@/types/database'
 import {
   CUT_DATA,
@@ -66,9 +81,19 @@ interface CutSheetState {
   specialInstructions: string
 }
 
+interface CutSheetTemplate {
+  id: string
+  template_name: string
+  animal_type: AnimalType
+}
+
 interface CutSheetBuilderProps {
   initialAnimalType?: AnimalType
+  initialState?: Partial<CutSheetState>
+  templates?: CutSheetTemplate[]
   onSave: (state: CutSheetState) => Promise<void>
+  onSaveAsTemplate?: (state: CutSheetState, name: string) => Promise<void>
+  onLoadTemplate?: (templateId: string) => Promise<CutSheetState | null>
   onCancel?: () => void
 }
 
@@ -100,12 +125,24 @@ const DEFAULT_STATE: CutSheetState = {
   specialInstructions: '',
 }
 
-export function CutSheetBuilder({ initialAnimalType, onSave, onCancel }: CutSheetBuilderProps) {
+export function CutSheetBuilder({
+  initialAnimalType,
+  initialState,
+  templates = [],
+  onSave,
+  onSaveAsTemplate,
+  onLoadTemplate,
+  onCancel
+}: CutSheetBuilderProps) {
   const [state, setState] = useState<CutSheetState>({
     ...DEFAULT_STATE,
     animalType: initialAnimalType || 'beef',
+    ...initialState,
   })
   const [saving, setSaving] = useState(false)
+  const [showSaveTemplate, setShowSaveTemplate] = useState(false)
+  const [templateName, setTemplateName] = useState('')
+  const [loadingTemplate, setLoadingTemplate] = useState(false)
 
   // Get cuts for current animal type
   const animalCuts = useMemo(() => CUT_DATA[state.animalType], [state.animalType])
@@ -206,6 +243,41 @@ export function CutSheetBuilder({ initialAnimalType, onSave, onCancel }: CutShee
       setSaving(false)
     }
   }
+
+  // Handle save as template
+  const handleSaveAsTemplate = async () => {
+    if (!onSaveAsTemplate || !templateName.trim()) return
+    setSaving(true)
+    try {
+      await onSaveAsTemplate(state, templateName.trim())
+      setShowSaveTemplate(false)
+      setTemplateName('')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // Handle load template
+  const handleLoadTemplate = async (templateId: string) => {
+    if (!onLoadTemplate) return
+    setLoadingTemplate(true)
+    try {
+      const templateState = await onLoadTemplate(templateId)
+      if (templateState) {
+        setState(prev => ({
+          ...prev,
+          ...templateState,
+          // Keep the current animal type if it was set
+          animalType: initialAnimalType || templateState.animalType,
+        }))
+      }
+    } finally {
+      setLoadingTemplate(false)
+    }
+  }
+
+  // Filter templates for current animal type
+  const availableTemplates = templates.filter(t => t.animal_type === state.animalType)
 
   // Render cut item
   const renderCutItem = (cut: CutOption) => {
@@ -656,6 +728,43 @@ export function CutSheetBuilder({ initialAnimalType, onSave, onCancel }: CutShee
               </div>
             )}
 
+            {/* Template Actions */}
+            {(availableTemplates.length > 0 || onSaveAsTemplate) && (
+              <div className="border-t pt-4 space-y-2">
+                <Label className="text-sm text-gray-500">Templates</Label>
+                <div className="flex gap-2">
+                  {availableTemplates.length > 0 && onLoadTemplate && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" disabled={loadingTemplate}>
+                          <FolderOpen className="h-4 w-4 mr-2" />
+                          Load
+                          <ChevronDown className="h-4 w-4 ml-2" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        {availableTemplates.map(t => (
+                          <DropdownMenuItem key={t.id} onClick={() => handleLoadTemplate(t.id)}>
+                            {t.template_name}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                  {onSaveAsTemplate && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowSaveTemplate(true)}
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      Save as Template
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div className="border-t pt-4 space-y-2">
               <Button
                 className="w-full bg-green-700 hover:bg-green-800"
@@ -673,8 +782,41 @@ export function CutSheetBuilder({ initialAnimalType, onSave, onCancel }: CutShee
           </CardContent>
         </Card>
       </div>
+
+      {/* Save as Template Dialog */}
+      <Dialog open={showSaveTemplate} onOpenChange={setShowSaveTemplate}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Save as Template</DialogTitle>
+            <DialogDescription>
+              Save your current cut selections as a reusable template
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="template-name">Template Name</Label>
+            <Input
+              id="template-name"
+              placeholder="e.g., Standard Family Pack"
+              value={templateName}
+              onChange={e => setTemplateName(e.target.value)}
+              className="mt-2"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSaveTemplate(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveAsTemplate}
+              disabled={!templateName.trim() || saving}
+            >
+              {saving ? 'Saving...' : 'Save Template'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
 
-export type { CutSheetState }
+export type { CutSheetState, CutSheetTemplate }

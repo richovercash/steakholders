@@ -4,8 +4,13 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { CutSheetBuilder, type CutSheetState } from '@/components/cutsheet/CutSheetBuilder'
+import { CutSheetBuilder, type CutSheetState, type CutSheetTemplate } from '@/components/cutsheet/CutSheetBuilder'
 import { ArrowLeft } from 'lucide-react'
+import {
+  getTemplatesForOrganization,
+  saveAsTemplate,
+  loadTemplate
+} from '@/lib/actions/cut-sheet-templates'
 import type { AnimalType, CutSheetItem, CutSheetSausage } from '@/types/database'
 
 interface OrderInfo {
@@ -27,6 +32,7 @@ export default function OrderCutSheetPage({ params }: PageProps) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [organizationId, setOrganizationId] = useState<string | null>(null)
+  const [templates, setTemplates] = useState<CutSheetTemplate[]>([])
   const router = useRouter()
   const supabase = createClient()
 
@@ -72,6 +78,11 @@ export default function OrderCutSheetPage({ params }: PageProps) {
       }
 
       setOrder(orderData)
+
+      // Load templates
+      const loadedTemplates = await getTemplatesForOrganization()
+      setTemplates(loadedTemplates)
+
       setLoading(false)
     }
 
@@ -171,6 +182,21 @@ export default function OrderCutSheetPage({ params }: PageProps) {
     }
   }
 
+  const handleSaveAsTemplate = async (state: CutSheetState, name: string) => {
+    const result = await saveAsTemplate(state, name)
+    if (result.success) {
+      // Reload templates list
+      const loadedTemplates = await getTemplatesForOrganization()
+      setTemplates(loadedTemplates)
+    } else {
+      console.error('Error saving template:', result.error)
+    }
+  }
+
+  const handleLoadTemplate = async (templateId: string): Promise<CutSheetState | null> => {
+    return await loadTemplate(templateId)
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -216,7 +242,10 @@ export default function OrderCutSheetPage({ params }: PageProps) {
 
       <CutSheetBuilder
         initialAnimalType={order.livestock?.animal_type || 'beef'}
+        templates={templates}
         onSave={handleSave}
+        onSaveAsTemplate={handleSaveAsTemplate}
+        onLoadTemplate={handleLoadTemplate}
         onCancel={() => router.push(`/dashboard/orders/${order.id}`)}
       />
     </div>
