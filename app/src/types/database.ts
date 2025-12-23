@@ -20,6 +20,15 @@ export type CutCategory = 'steak' | 'roast' | 'ground' | 'ribs' | 'bacon' | 'sau
 export type SausageFlavor = 'mild' | 'medium' | 'hot' | 'sweet_italian' | 'hot_italian' | 'chorizo' | 'bratwurst' | 'polish' | 'breakfast' | 'maple_breakfast'
 export type GroundType = 'bulk' | 'vacuum' | 'patties'
 export type PattySize = '1/4' | '1/3' | '1/2'
+export type NotificationType =
+  | 'order_submitted'
+  | 'order_confirmed'
+  | 'order_status_update'
+  | 'order_ready'
+  | 'order_complete'
+  | 'new_message'
+  | 'slot_available'
+  | 'system'
 
 export interface Database {
   public: {
@@ -673,4 +682,9 @@ export interface SelectedCut {
 export interface CutSheetWithItems extends CutSheet {
   items: CutSheetItem[]
   sausages: CutSheetSausage[]
+}
+
+// Notification with related entities
+export interface NotificationWithRelations extends Notification {
+  processing_order?: ProcessingOrder | null
 }
