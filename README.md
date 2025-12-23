@@ -2,146 +2,205 @@
 
 > Connecting livestock producers with meat processors
 
+A B2B platform that streamlines the process of booking custom meat processing, managing cut sheets, and tracking orders from farm to freezer.
+
+## Quick Links
+
+- [Architecture Decision Records](./docs/adr/README.md)
+- [Development Learnings](./docs/LEARNINGS.md)
+- [Technical Architecture](./Steakholders_Technical_Architecture.docx)
+
 ## Project Structure
 
 ```
-steakholders-landing/
-├── public/
-│   └── index.html      # Landing page for validation/waitlist
-├── supabase-schema.sql # Database schema for Supabase
-├── vercel.json         # Vercel deployment config
-└── README.md
+steakholders/
+├── app/                    # Next.js 14 application
+│   ├── src/
+│   │   ├── app/           # App Router pages
+│   │   ├── components/    # React components
+│   │   ├── lib/           # Utilities & Supabase clients
+│   │   └── types/         # TypeScript types
+│   ├── tests/             # Playwright E2E tests
+│   └── playwright/        # Test configuration & auth state
+├── docs/
+│   ├── adr/               # Architecture Decision Records
+│   └── LEARNINGS.md       # Development tips & gotchas
+├── supabase/
+│   └── migrations/        # Database migrations
+└── supabase-schema.sql    # Full database schema
 ```
 
-## Quick Start
+## Tech Stack
 
-### 1. Deploy Landing Page to Vercel
+| Layer | Technology |
+|-------|------------|
+| Frontend | Next.js 14, React 18, TypeScript |
+| UI | Radix UI, Shadcn/ui, Tailwind CSS |
+| Backend | Supabase (PostgreSQL, Auth, Realtime) |
+| Forms | React Hook Form, Zod |
+| Testing | Playwright |
+| Hosting | Vercel |
 
-**Option A: Via Vercel Dashboard**
-1. Go to [vercel.com/new](https://vercel.com/new)
-2. Import this repository or drag/drop the folder
-3. Deploy (no configuration needed)
+## Features
 
-**Option B: Via Vercel CLI**
+### Producer Features
+- Livestock management (add, track, schedule animals)
+- Discover and browse processors
+- Create processing orders
+- Build detailed cut sheets
+- Message processors
+- Track order status
+
+### Processor Features
+- Calendar availability management
+- View and manage incoming orders
+- Update processing stages
+- View cut sheet specifications
+- Message producers
+- Track order completion
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 18+
+- npm or yarn
+- Supabase account
+
+### 1. Clone and Install
+
 ```bash
-npm i -g vercel
-cd steakholders-landing
-vercel
+cd steakholders/app
+npm install
 ```
 
-Your landing page will be live at `https://your-project.vercel.app`
+### 2. Environment Setup
 
-### 2. Set Up Supabase Database
+Create `.env.local` in the `app` directory:
 
-1. Create a new project at [supabase.com](https://supabase.com)
-2. Go to **SQL Editor**
-3. Copy the contents of `supabase-schema.sql`
-4. Run the SQL to create all tables, policies, and indexes
-
-### 3. Connect Waitlist to Supabase (Optional Enhancement)
-
-To store waitlist signups in Supabase instead of localStorage:
-
-1. Create a `waitlist_signups` table:
-```sql
-CREATE TABLE waitlist_signups (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    email VARCHAR(255) UNIQUE NOT NULL,
-    user_type VARCHAR(20), -- 'producer' or 'processor'
-    source VARCHAR(50) DEFAULT 'landing_page'
-);
-
--- Allow anonymous inserts
-ALTER TABLE waitlist_signups ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Anyone can sign up for waitlist"
-    ON waitlist_signups FOR INSERT
-    WITH CHECK (true);
+```env
+NEXT_PUBLIC_SUPABASE_URL=your-project-url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 ```
 
-2. Update the landing page JavaScript to use Supabase:
-```javascript
-// Add Supabase client
-import { createClient } from '@supabase/supabase-js'
-const supabase = createClient('YOUR_SUPABASE_URL', 'YOUR_ANON_KEY')
+### 3. Database Setup
 
-// In form handler:
-const { error } = await supabase
-    .from('waitlist_signups')
-    .insert({ email: email })
+1. Create a Supabase project at [supabase.com](https://supabase.com)
+2. Go to SQL Editor
+3. Run `supabase-schema.sql` to create tables and policies
+4. Or run migrations from `supabase/migrations/` in order
+
+### 4. Run Development Server
+
+```bash
+npm run dev
 ```
 
-## Architecture Overview
+Open [http://localhost:3000](http://localhost:3000)
 
-### Tech Stack
-- **Frontend**: Next.js 14+ (to be built)
-- **Backend**: Supabase (PostgreSQL + Auth + Realtime)
-- **Hosting**: Vercel
-- **Email**: Resend (for notifications)
+## Testing
 
-### Database Schema Highlights
+### Setup Test Accounts
 
-- **organizations**: Multi-tenant container for both producers and processors
-- **users**: Individual accounts linked to organizations
-- **livestock**: Animals tracked from farm through processing
-- **processing_orders**: The core entity connecting all parties
-- **cut_sheets**: Producer's processing instructions
-- **calendar_slots**: Processor availability management
-- **messages**: Direct communication between parties
+Create test users in Supabase Authentication, then run SQL to link them to organizations. See [LEARNINGS.md](./docs/LEARNINGS.md) for details.
 
-### Row-Level Security
+### Run Tests
 
-All tables have RLS enabled:
-- Users can only access data from their organization
-- Processing orders visible to both producer AND processor
-- Processor profiles publicly viewable for discovery
+```bash
+# Set test credentials
+export TEST_PRODUCER_EMAIL='your-producer@test.com'
+export TEST_PRODUCER_PASSWORD='password'
+export TEST_PROCESSOR_EMAIL='your-processor@test.com'
+export TEST_PROCESSOR_PASSWORD='password'
+
+# Run all tests
+npm run test
+
+# Run with UI
+npm run test:ui
+
+# Run headed (visible browser)
+npm run test:headed
+```
+
+## Database Schema
+
+### Core Tables
+
+| Table | Description |
+|-------|-------------|
+| organizations | Producers and processors (multi-tenant) |
+| users | Individual accounts linked to organizations |
+| livestock | Producer's animals |
+| calendar_slots | Processor availability |
+| processing_orders | Orders linking producer to processor |
+| cut_sheets | Processing instructions |
+| messages | Organization-to-organization messaging |
+| notifications | User notifications |
+
+### Key Relationships
+
+```
+Organization (Producer)
+    ├── Users (team members)
+    ├── Livestock (animals)
+    └── Processing Orders
+            ├── Cut Sheets
+            └── Messages
+
+Organization (Processor)
+    ├── Users (team members)
+    ├── Calendar Slots
+    └── Processing Orders (received)
+            ├── Cut Sheets (view)
+            └── Messages
+```
+
+## Architecture Decisions
+
+Key architectural decisions are documented in [docs/adr/](./docs/adr/):
+
+- [ADR-001: Technology Stack](./docs/adr/001-technology-stack.md)
+- [ADR-002: Dual-Role Architecture](./docs/adr/002-dual-role-architecture.md)
+- [ADR-003: Database Design & RLS](./docs/adr/003-database-design-rls.md)
+- [ADR-004: Cut Sheet Architecture](./docs/adr/004-cut-sheet-architecture.md)
+- [ADR-005: Authentication Flow](./docs/adr/005-authentication-flow.md)
+- [ADR-006: Messaging System](./docs/adr/006-messaging-system.md)
 
 ## Development Roadmap
 
-### Phase 1: Foundation (Weeks 1-2)
-- [ ] Authentication & user signup
-- [ ] Organization creation flow
-- [ ] Producer/processor profile setup
-- [ ] Discovery dashboard (find nearby processors)
+### Completed
+- [x] Authentication & onboarding
+- [x] Dual-role dashboard (producer/processor)
+- [x] Livestock management
+- [x] Processor discovery
+- [x] Calendar & availability
+- [x] Order creation & tracking
+- [x] Cut sheet builder
+- [x] Messaging system
 
-### Phase 2: Core Workflow (Weeks 3-4)
-- [ ] Livestock management (add/edit animals)
-- [ ] Calendar & scheduling system
-- [ ] Processing order creation
-
-### Phase 3: Cut Sheets & Tracking (Weeks 5-6)
-- [ ] Visual cut sheet builder
-- [ ] Order progress tracking
-- [ ] Email notifications
-
-### Phase 4: Communication & Polish (Weeks 7-8)
-- [ ] Messaging system
-- [ ] Mobile optimization (PWA)
-- [ ] Basic reporting
+### Planned
+- [ ] Notification system (email/push)
+- [ ] Waitlist management
+- [ ] Payment integration
+- [ ] Reporting & analytics
+- [ ] Mobile optimization
 
 ## Environment Variables
 
-For the full MVP, you'll need:
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL | Yes |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous key | Yes |
+| `SUPABASE_SERVICE_ROLE_KEY` | Service role key (server only) | For admin |
+| `RESEND_API_KEY` | Email service API key | For notifications |
 
-```env
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=your-project-url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-key
+## Contributing
 
-# Resend (for email)
-RESEND_API_KEY=your-resend-key
-
-# App
-NEXT_PUBLIC_APP_URL=https://steakholders.us
-```
-
-## Resources
-
-- [Supabase Docs](https://supabase.com/docs)
-- [Next.js Docs](https://nextjs.org/docs)
-- [Vercel Docs](https://vercel.com/docs)
-- [Original PRD](./docs/Product_Requirements_Document.pdf)
+1. Read the [ADRs](./docs/adr/) to understand architectural decisions
+2. Check [LEARNINGS.md](./docs/LEARNINGS.md) for development tips
+3. Run tests before submitting changes
+4. Follow existing code patterns
 
 ## License
 
