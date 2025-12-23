@@ -1,12 +1,19 @@
 import { test, expect } from '@playwright/test'
+import fs from 'fs'
+import path from 'path'
 
 // These tests require authentication
 // Run with: TEST_PRODUCER_EMAIL=... TEST_PRODUCER_PASSWORD=... npx playwright test
 
-test.describe('Dashboard - Producer', () => {
-  test.use({ storageState: 'playwright/.auth/producer.json' })
+const producerAuthFile = path.join(__dirname, '../playwright/.auth/producer.json')
+const processorAuthFile = path.join(__dirname, '../playwright/.auth/processor.json')
+const hasProducerAuth = fs.existsSync(producerAuthFile)
+const hasProcessorAuth = fs.existsSync(processorAuthFile)
 
-  test.skip(!process.env.TEST_PRODUCER_EMAIL, 'Requires TEST_PRODUCER_EMAIL')
+test.describe('Dashboard - Producer', () => {
+  test.skip(!hasProducerAuth, 'Requires producer auth state - run auth setup first')
+
+  test.use({ storageState: hasProducerAuth ? producerAuthFile : undefined })
 
   test('should display producer dashboard', async ({ page }) => {
     await page.goto('/dashboard')
@@ -59,9 +66,9 @@ test.describe('Dashboard - Producer', () => {
 })
 
 test.describe('Dashboard - Processor', () => {
-  test.use({ storageState: 'playwright/.auth/processor.json' })
+  test.skip(!hasProcessorAuth, 'Requires processor auth state - run auth setup first')
 
-  test.skip(!process.env.TEST_PROCESSOR_EMAIL, 'Requires TEST_PROCESSOR_EMAIL')
+  test.use({ storageState: hasProcessorAuth ? processorAuthFile : undefined })
 
   test('should display processor dashboard', async ({ page }) => {
     await page.goto('/dashboard')

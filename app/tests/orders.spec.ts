@@ -1,9 +1,16 @@
 import { test, expect } from '@playwright/test'
+import fs from 'fs'
+import path from 'path'
+
+const producerAuthFile = path.join(__dirname, '../playwright/.auth/producer.json')
+const processorAuthFile = path.join(__dirname, '../playwright/.auth/processor.json')
+const hasProducerAuth = fs.existsSync(producerAuthFile)
+const hasProcessorAuth = fs.existsSync(processorAuthFile)
 
 test.describe('Orders - Producer Flow', () => {
-  test.use({ storageState: 'playwright/.auth/producer.json' })
+  test.skip(!hasProducerAuth, 'Requires producer auth state')
 
-  test.skip(!process.env.TEST_PRODUCER_EMAIL, 'Requires TEST_PRODUCER_EMAIL')
+  test.use({ storageState: hasProducerAuth ? producerAuthFile : undefined })
 
   test('should display orders list page', async ({ page }) => {
     await page.goto('/dashboard/orders')
@@ -65,9 +72,9 @@ test.describe('Orders - Producer Flow', () => {
 })
 
 test.describe('Orders - Processor Flow', () => {
-  test.use({ storageState: 'playwright/.auth/processor.json' })
+  test.skip(!hasProcessorAuth, 'Requires processor auth state')
 
-  test.skip(!process.env.TEST_PROCESSOR_EMAIL, 'Requires TEST_PROCESSOR_EMAIL')
+  test.use({ storageState: hasProcessorAuth ? processorAuthFile : undefined })
 
   test('should display orders list for processor', async ({ page }) => {
     await page.goto('/dashboard/orders')
@@ -90,9 +97,9 @@ test.describe('Orders - Processor Flow', () => {
 })
 
 test.describe('Order Detail Page', () => {
-  test.use({ storageState: 'playwright/.auth/producer.json' })
+  test.skip(!hasProducerAuth, 'Requires producer auth state')
 
-  test.skip(!process.env.TEST_PRODUCER_EMAIL, 'Requires TEST_PRODUCER_EMAIL')
+  test.use({ storageState: hasProducerAuth ? producerAuthFile : undefined })
 
   test('should display order detail page structure', async ({ page }) => {
     // First get an order from the list
@@ -113,9 +120,9 @@ test.describe('Order Detail Page', () => {
 })
 
 test.describe('Calendar - Processor', () => {
-  test.use({ storageState: 'playwright/.auth/processor.json' })
+  test.skip(!hasProcessorAuth, 'Requires processor auth state')
 
-  test.skip(!process.env.TEST_PROCESSOR_EMAIL, 'Requires TEST_PROCESSOR_EMAIL')
+  test.use({ storageState: hasProcessorAuth ? processorAuthFile : undefined })
 
   test('should display calendar page', async ({ page }) => {
     await page.goto('/dashboard/calendar')
@@ -167,9 +174,9 @@ test.describe('Calendar - Processor', () => {
 })
 
 test.describe('Cut Sheet', () => {
-  test.use({ storageState: 'playwright/.auth/producer.json' })
+  test.skip(!hasProducerAuth, 'Requires producer auth state')
 
-  test.skip(!process.env.TEST_PRODUCER_EMAIL, 'Requires TEST_PRODUCER_EMAIL')
+  test.use({ storageState: hasProducerAuth ? producerAuthFile : undefined })
 
   test('should navigate to cut sheet page from order', async ({ page }) => {
     await page.goto('/dashboard/orders')
