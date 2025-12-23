@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { ClipboardList, Calendar, Truck, MessageSquare, AlertCircle, ArrowRight } from 'lucide-react'
+import { ClipboardList, Calendar, Truck, MessageSquare, AlertCircle, ArrowRight, Plus, Search } from 'lucide-react'
 import type { OrganizationType } from '@/types/database'
 
 interface ProfileWithOrg {
@@ -145,88 +145,134 @@ export default async function DashboardPage() {
         </p>
       </div>
 
+      {/* Quick Actions */}
+      <div className="flex flex-wrap gap-3">
+        {isProducer ? (
+          <>
+            <Link href="/dashboard/orders/new">
+              <Button className="bg-green-700 hover:bg-green-800">
+                <Plus className="h-4 w-4 mr-2" />
+                New Order
+              </Button>
+            </Link>
+            <Link href="/dashboard/discover">
+              <Button variant="outline">
+                <Search className="h-4 w-4 mr-2" />
+                Find Processors
+              </Button>
+            </Link>
+          </>
+        ) : (
+          <Link href="/dashboard/calendar">
+            <Button className="bg-green-700 hover:bg-green-800">
+              <Calendar className="h-4 w-4 mr-2" />
+              View Calendar
+            </Button>
+          </Link>
+        )}
+        <Link href="/dashboard/messages">
+          <Button variant="outline">
+            <MessageSquare className="h-4 w-4 mr-2" />
+            Messages
+            {(unreadMessages || 0) > 0 && (
+              <Badge className="ml-2 bg-green-700">{unreadMessages}</Badge>
+            )}
+          </Button>
+        </Link>
+      </div>
+
       {/* Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">
-              Active Orders
-            </CardTitle>
-            <ClipboardList className="h-4 w-4 text-gray-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{activeOrders || 0}</div>
-            <p className="text-xs text-gray-500">
-              Currently in progress
-            </p>
-          </CardContent>
-        </Card>
-
-        {isProducer ? (
-          <Card>
+        <Link href="/dashboard/orders" className="block">
+          <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-gray-500">
-                Livestock
+                Active Orders
               </CardTitle>
-              <Truck className="h-4 w-4 text-gray-400" />
+              <ClipboardList className="h-4 w-4 text-gray-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{livestockCount}</div>
+              <div className="text-2xl font-bold">{activeOrders || 0}</div>
               <p className="text-xs text-gray-500">
-                Animals on farm
+                Currently in progress
               </p>
             </CardContent>
           </Card>
+        </Link>
+
+        {isProducer ? (
+          <Link href="/dashboard/livestock" className="block">
+            <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-gray-500">
+                  Livestock
+                </CardTitle>
+                <Truck className="h-4 w-4 text-gray-400" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{livestockCount}</div>
+                <p className="text-xs text-gray-500">
+                  Animals on farm
+                </p>
+              </CardContent>
+            </Card>
+          </Link>
         ) : (
-          <Card>
+          <Link href="/dashboard/calendar" className="block">
+            <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-gray-500">
+                  This Week
+                </CardTitle>
+                <Calendar className="h-4 w-4 text-gray-400" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {organization?.capacity_per_week || 0}
+                </div>
+                <p className="text-xs text-gray-500">
+                  Capacity per week
+                </p>
+              </CardContent>
+            </Card>
+          </Link>
+        )}
+
+        <Link href="/dashboard/messages" className="block">
+          <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-gray-500">
-                This Week
+                Unread Messages
               </CardTitle>
-              <Calendar className="h-4 w-4 text-gray-400" />
+              <MessageSquare className="h-4 w-4 text-gray-400" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{unreadMessages || 0}</div>
+              <p className="text-xs text-gray-500">
+                Awaiting response
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/dashboard/orders" className="block">
+          <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-gray-500">
+                Ready for Pickup
+              </CardTitle>
+              <ClipboardList className="h-4 w-4 text-gray-400" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {organization?.capacity_per_week || 0}
+                {orders?.filter(o => o.status === 'ready').length || 0}
               </div>
               <p className="text-xs text-gray-500">
-                Capacity per week
+                Orders complete
               </p>
             </CardContent>
           </Card>
-        )}
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">
-              Unread Messages
-            </CardTitle>
-            <MessageSquare className="h-4 w-4 text-gray-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{unreadMessages || 0}</div>
-            <p className="text-xs text-gray-500">
-              Awaiting response
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">
-              Ready for Pickup
-            </CardTitle>
-            <ClipboardList className="h-4 w-4 text-gray-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {orders?.filter(o => o.status === 'ready').length || 0}
-            </div>
-            <p className="text-xs text-gray-500">
-              Orders complete
-            </p>
-          </CardContent>
-        </Card>
+        </Link>
       </div>
 
       {/* Pending Orders for Processors */}
@@ -297,9 +343,10 @@ export default async function DashboardPage() {
           {orders && orders.length > 0 ? (
             <div className="space-y-4">
               {orders.map((order) => (
-                <div
+                <Link
                   key={order.id}
-                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+                  href={`/dashboard/orders/${order.id}`}
+                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-4">
                     <div>
@@ -328,8 +375,9 @@ export default async function DashboardPage() {
                     <Badge className={statusColors[order.status]}>
                       {order.status.replace('_', ' ')}
                     </Badge>
+                    <ArrowRight className="h-4 w-4 text-gray-400" />
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           ) : (

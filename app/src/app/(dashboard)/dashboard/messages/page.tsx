@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { MessageSquare, ChevronRight } from 'lucide-react'
+import { MessageSquare, ChevronRight, Building2, Warehouse } from 'lucide-react'
 import { NewConversationButton } from './NewConversationButton'
 
 interface ProfileResult {
@@ -125,10 +125,10 @@ export default async function MessagesPage() {
                   className="flex items-center justify-between py-4 hover:bg-gray-50 -mx-4 px-4 transition-colors"
                 >
                   <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg ${
-                      conv.orgType === 'producer' ? 'bg-green-100' : 'bg-amber-100'
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                      conv.orgType === 'producer' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
                     }`}>
-                      {conv.orgType === 'producer' ? '🐄' : '🥩'}
+                      {conv.orgType === 'producer' ? <Building2 className="h-5 w-5" /> : <Warehouse className="h-5 w-5" />}
                     </div>
                     <div>
                       <div className="flex items-center gap-2">

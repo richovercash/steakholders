@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus } from 'lucide-react'
+import { Plus, Building2, Warehouse } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -32,7 +32,7 @@ export function NewConversationButton({ availableOrgs }: NewConversationButtonPr
     router.push(`/dashboard/messages/${orgId}`)
   }
 
-  if (availableOrgs.length === 0) {
+  if (!availableOrgs || availableOrgs.length === 0) {
     return null
   }
 
@@ -58,10 +58,10 @@ export function NewConversationButton({ availableOrgs }: NewConversationButtonPr
               onClick={() => handleSelect(org.id)}
               className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 transition-colors text-left"
             >
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg ${
-                org.type === 'producer' ? 'bg-green-100' : 'bg-amber-100'
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                org.type === 'producer' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
               }`}>
-                {org.type === 'producer' ? '🐄' : '🥩'}
+                {org.type === 'producer' ? <Building2 className="h-5 w-5" /> : <Warehouse className="h-5 w-5" />}
               </div>
               <div>
                 <p className="font-medium">{org.name}</p>

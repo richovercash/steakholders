@@ -17,15 +17,15 @@ const TEST_PRODUCER = {
 const TEST_PROCESSOR = {
   email: process.env.TEST_NEW_PROCESSOR_EMAIL || 'richovercash+testprocessor@gmail.com',
   password: 'TestProcessor123!',
-  fullName: 'Test Processor',
-  orgName: 'Test Meat Processing',
+  fullName: 'Valley Meat Admin',
+  orgName: 'Valley Meat Processing',
   licenseNumber: 'USDA-12345',
   licenseType: 'usda',
-  capacity: '20',
-  city: 'Dallas',
+  capacity: '25',
+  city: 'San Antonio',
   state: 'TX',
-  zip: '75201',
-  phone: '(214) 555-0202',
+  zip: '78201',
+  phone: '(210) 555-0202',
 }
 
 async function tryLogin(page: import('@playwright/test').Page, email: string, password: string): Promise<boolean> {

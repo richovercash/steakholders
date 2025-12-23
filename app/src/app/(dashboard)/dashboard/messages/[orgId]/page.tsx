@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { ArrowLeft, Send } from 'lucide-react'
+import { ArrowLeft, Send, Building2, Warehouse } from 'lucide-react'
 import type { Message, Organization } from '@/types/database'
 
 interface MessageWithSender extends Message {
@@ -266,10 +266,10 @@ export default function ConversationPage({ params }: PageProps) {
           <ArrowLeft className="h-5 w-5" />
         </Link>
         <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg ${
-            partnerOrg?.type === 'producer' ? 'bg-green-100' : 'bg-amber-100'
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+            partnerOrg?.type === 'producer' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
           }`}>
-            {partnerOrg?.type === 'producer' ? '🐄' : '🥩'}
+            {partnerOrg?.type === 'producer' ? <Building2 className="h-5 w-5" /> : <Warehouse className="h-5 w-5" />}
           </div>
           <div>
             <h1 className="text-xl font-bold">{partnerOrg?.name}</h1>
