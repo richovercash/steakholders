@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { DashboardNav } from '@/components/dashboard/nav'
 import { DevModeToggle } from '@/components/dashboard/DevModeToggle'
 import { Toaster } from '@/components/ui/toaster'
+import { getNotifications, getUnreadCount } from '@/lib/notifications/actions'
 import type { User, Organization } from '@/types/database'
 
 interface ProfileWithOrg extends User {
@@ -36,9 +37,20 @@ export default async function DashboardLayout({
     redirect('/onboarding')
   }
 
+  // Fetch initial notification data
+  const [initialNotifications, unreadCount] = await Promise.all([
+    getNotifications(10),
+    getUnreadCount()
+  ])
+
   return (
     <div className="min-h-screen bg-gray-50">
-      <DashboardNav user={profile} organization={profile.organization!} />
+      <DashboardNav
+        user={profile}
+        organization={profile.organization!}
+        initialNotifications={initialNotifications}
+        initialUnreadCount={unreadCount}
+      />
       <main className="lg:pl-64">
         <div className="p-6">
           {children}

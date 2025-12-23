@@ -14,7 +14,6 @@ import {
   LogOut,
   Menu,
   Search,
-  Bell,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -26,14 +25,17 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
-import type { User, Organization } from '@/types/database'
+import { NotificationBell } from '@/components/notifications'
+import type { User, Organization, NotificationWithRelations } from '@/types/database'
 
 interface DashboardNavProps {
   user: User
   organization: Organization
+  initialNotifications?: NotificationWithRelations[]
+  initialUnreadCount?: number
 }
 
-export function DashboardNav({ user, organization }: DashboardNavProps) {
+export function DashboardNav({ user, organization, initialNotifications = [], initialUnreadCount = 0 }: DashboardNavProps) {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
@@ -157,9 +159,11 @@ export function DashboardNav({ user, organization }: DashboardNavProps) {
           </span>
         </div>
 
-        <Button variant="ghost" size="icon">
-          <Bell className="h-5 w-5" />
-        </Button>
+        <NotificationBell
+          initialCount={initialUnreadCount}
+          initialNotifications={initialNotifications}
+          userId={user.id}
+        />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -193,9 +197,11 @@ export function DashboardNav({ user, organization }: DashboardNavProps) {
       {/* Desktop Header */}
       <div className="hidden lg:flex lg:pl-64">
         <div className="sticky top-0 z-40 flex items-center justify-end gap-4 bg-white border-b px-6 h-16 w-full">
-          <Button variant="ghost" size="icon">
-            <Bell className="h-5 w-5" />
-          </Button>
+          <NotificationBell
+            initialCount={initialUnreadCount}
+            initialNotifications={initialNotifications}
+            userId={user.id}
+          />
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
