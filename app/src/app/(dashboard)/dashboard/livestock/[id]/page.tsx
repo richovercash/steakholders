@@ -10,7 +10,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Trash2, Edit3, Save, X } from 'lucide-react'
+import { ArrowLeft, Trash2, Edit3, Save, X, Beef, PiggyBank, Rabbit } from 'lucide-react'
+import { GoatIcon } from '@/components/icons/AnimalIcons'
 import type { Livestock, AnimalType, LivestockStatus } from '@/types/database'
 
 interface PageProps {
@@ -192,11 +193,15 @@ export default function LivestockDetailPage({ params }: PageProps) {
     sold: 'bg-gray-100 text-gray-800',
   }
 
-  const animalIcons: Record<string, string> = {
-    beef: '🐄',
-    pork: '🐷',
-    lamb: '🐑',
-    goat: '🐐',
+  const getAnimalIcon = (type: string) => {
+    const iconClass = "h-12 w-12"
+    switch (type) {
+      case 'beef': return <Beef className={`${iconClass} text-red-600`} />
+      case 'pork': return <PiggyBank className={`${iconClass} text-pink-600`} />
+      case 'lamb': return <Rabbit className={`${iconClass} text-purple-600`} />
+      case 'goat': return <GoatIcon className={`${iconClass} text-amber-600`} size={48} />
+      default: return <Beef className={`${iconClass} text-red-600`} />
+    }
   }
 
   if (loading) {
@@ -297,8 +302,8 @@ export default function LivestockDetailPage({ params }: PageProps) {
       <Card>
         <CardHeader>
           <div className="flex items-center gap-4">
-            <div className="text-5xl">
-              {animalIcons[livestock?.animal_type || 'beef']}
+            <div className="flex items-center justify-center w-16 h-16 bg-gray-50 rounded-xl">
+              {getAnimalIcon(livestock?.animal_type || 'beef')}
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-3">

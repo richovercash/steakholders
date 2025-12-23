@@ -4,7 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Beef } from 'lucide-react'
+import { Plus, Beef, PiggyBank, Rabbit } from 'lucide-react'
+import { GoatIcon } from '@/components/icons/AnimalIcons'
 import type { Livestock, Organization } from '@/types/database'
 
 export default async function LivestockPage() {
@@ -38,11 +39,15 @@ export default async function LivestockPage() {
     sold: 'bg-gray-100 text-gray-800',
   }
 
-  const animalIcons: Record<string, string> = {
-    beef: '🐄',
-    pork: '🐷',
-    lamb: '🐑',
-    goat: '🐐',
+  const getAnimalIcon = (type: string) => {
+    const iconClass = "h-8 w-8"
+    switch (type) {
+      case 'beef': return <Beef className={`${iconClass} text-red-600`} />
+      case 'pork': return <PiggyBank className={`${iconClass} text-pink-600`} />
+      case 'lamb': return <Rabbit className={`${iconClass} text-purple-600`} />
+      case 'goat': return <GoatIcon className={`${iconClass} text-amber-600`} size={32} />
+      default: return <Beef className={`${iconClass} text-red-600`} />
+    }
   }
 
   return (
@@ -93,8 +98,8 @@ export default async function LivestockPage() {
                   className="flex items-center justify-between py-4 hover:bg-gray-50 -mx-4 px-4 transition-colors"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="text-3xl">
-                      {animalIcons[animal.animal_type] || '🐄'}
+                    <div className="flex items-center justify-center w-12 h-12 bg-gray-50 rounded-lg">
+                      {getAnimalIcon(animal.animal_type)}
                     </div>
                     <div>
                       <div className="flex items-center gap-3">

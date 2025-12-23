@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { ChevronLeft, ChevronRight, Plus, X, Calendar as CalendarIcon } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, X, Calendar as CalendarIcon, Beef, PiggyBank, Rabbit } from 'lucide-react'
+import { GoatIcon } from '@/components/icons/AnimalIcons'
 import type { AnimalType } from '@/types/database'
 
 interface CalendarSlot {
@@ -26,11 +27,11 @@ interface SlotsByDate {
   [date: string]: CalendarSlot[]
 }
 
-const ANIMAL_TYPES: { value: AnimalType; label: string; icon: string }[] = [
-  { value: 'beef', label: 'Beef', icon: '🐄' },
-  { value: 'pork', label: 'Pork', icon: '🐷' },
-  { value: 'lamb', label: 'Lamb', icon: '🐑' },
-  { value: 'goat', label: 'Goat', icon: '🐐' },
+const ANIMAL_TYPES: { value: AnimalType; label: string; icon: React.ReactNode }[] = [
+  { value: 'beef', label: 'Beef', icon: <Beef className="h-5 w-5 text-red-600" /> },
+  { value: 'pork', label: 'Pork', icon: <PiggyBank className="h-5 w-5 text-pink-600" /> },
+  { value: 'lamb', label: 'Lamb', icon: <Rabbit className="h-5 w-5 text-purple-600" /> },
+  { value: 'goat', label: 'Goat', icon: <GoatIcon className="h-5 w-5 text-amber-600" size={20} /> },
 ]
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -346,13 +347,13 @@ export default function CalendarPage() {
                         <button
                           key={slot.id}
                           onClick={() => openSlotModal(dateStr, slot)}
-                          className={`w-full text-left text-xs p-1 rounded ${
+                          className={`w-full text-left text-xs p-1 rounded flex items-center ${
                             slot.is_available && available > 0
                               ? 'bg-green-100 hover:bg-green-200'
                               : 'bg-gray-100 hover:bg-gray-200'
                           }`}
                         >
-                          <span>{animal?.icon}</span>
+                          <span className="shrink-0">{animal?.icon}</span>
                           <span className="ml-1">
                             {slot.booked_count}/{slot.capacity}
                           </span>
@@ -408,13 +409,13 @@ export default function CalendarPage() {
                     <button
                       key={animal.value}
                       onClick={() => setSlotForm({ ...slotForm, animal_type: animal.value })}
-                      className={`p-2 rounded border-2 text-center ${
+                      className={`p-2 rounded border-2 text-center flex flex-col items-center ${
                         slotForm.animal_type === animal.value
                           ? 'border-amber-500 bg-amber-50'
                           : 'border-gray-200 hover:border-gray-300'
                       }`}
                     >
-                      <div className="text-xl">{animal.icon}</div>
+                      <div className="mb-1">{animal.icon}</div>
                       <div className="text-xs">{animal.label}</div>
                     </button>
                   ))}

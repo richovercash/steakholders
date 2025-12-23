@@ -20,7 +20,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Check, AlertTriangle, Save, FolderOpen, ChevronDown } from 'lucide-react'
+import { Check, AlertTriangle, Save, FolderOpen, ChevronDown, Beef, PiggyBank, Rabbit, Package, Utensils, Bone, Heart } from 'lucide-react'
+import { GoatIcon } from '@/components/icons/AnimalIcons'
 import type { AnimalType, CutCategory, SausageFlavor, GroundType, PattySize } from '@/types/database'
 import {
   CUT_DATA,
@@ -29,12 +30,31 @@ import {
   WEIGHT_OPTIONS,
   SAUSAGE_FLAVORS,
   ORGAN_OPTIONS,
-  ANIMAL_INFO,
   SECTION_INFO,
   validateCutSheet,
   estimateTakeHomeWeight,
   type CutOption,
 } from '@/lib/cut-sheet-data'
+
+// Local icon data to replace emoji-based ANIMAL_INFO
+const ANIMAL_ICONS: Record<AnimalType, { icon: React.ReactNode; label: string; color: string }> = {
+  beef: { icon: <Beef className="h-5 w-5" />, label: 'Beef', color: 'green' },
+  pork: { icon: <PiggyBank className="h-5 w-5" />, label: 'Pork', color: 'pink' },
+  lamb: { icon: <Rabbit className="h-5 w-5" />, label: 'Lamb', color: 'amber' },
+  goat: { icon: <GoatIcon className="h-5 w-5" size={20} />, label: 'Goat', color: 'stone' },
+}
+
+// Local section icons to replace emoji-based SECTION_INFO icons
+const SECTION_ICONS: Record<string, React.ReactNode> = {
+  steaks: <Utensils className="h-6 w-6 text-red-600" />,
+  roasts: <Package className="h-6 w-6 text-amber-600" />,
+  ribs: <Bone className="h-6 w-6 text-gray-600" />,
+  bacon: <Package className="h-6 w-6 text-rose-600" />,
+  sausage: <Package className="h-6 w-6 text-pink-600" />,
+  ground: <Package className="h-6 w-6 text-brown-600" />,
+  other: <Bone className="h-6 w-6 text-gray-600" />,
+  organs: <Heart className="h-6 w-6 text-red-600" />,
+}
 
 // Types for cut selections
 interface CutSelection {
@@ -360,7 +380,7 @@ export function CutSheetBuilder({
     return (
       <div id={sectionKey} className="mb-8">
         <div className="flex items-center gap-3 mb-4">
-          <span className="text-2xl">{info?.icon}</span>
+          <span className="shrink-0">{SECTION_ICONS[sectionKey] || SECTION_ICONS.other}</span>
           <div>
             <h3 className="text-lg font-semibold">{info?.label || sectionKey}</h3>
             <p className="text-sm text-gray-500">{info?.description}</p>
@@ -389,8 +409,8 @@ export function CutSheetBuilder({
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              <span>{ANIMAL_INFO[type].icon}</span>
-              <span>{ANIMAL_INFO[type].label}</span>
+              <span className="shrink-0">{ANIMAL_ICONS[type].icon}</span>
+              <span>{ANIMAL_ICONS[type].label}</span>
             </button>
           ))}
         </div>
@@ -429,7 +449,7 @@ export function CutSheetBuilder({
         <Card className="mb-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <span>🍔</span> Ground Meat
+              <Package className="h-5 w-5 text-amber-600" /> Ground Meat
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -444,7 +464,7 @@ export function CutSheetBuilder({
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  <div className="text-2xl mb-1">{type === 'patties' ? '🍔' : '📦'}</div>
+                  <div className="mb-1"><Package className="h-6 w-6 text-amber-600 mx-auto" /></div>
                   <div className="font-medium capitalize">{type}</div>
                   <div className="text-xs text-gray-500">
                     {type === 'bulk' && '1-2 lb packages'}
@@ -480,7 +500,7 @@ export function CutSheetBuilder({
           <Card className="mb-6">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <span>🌭</span> Sausage
+                <Package className="h-5 w-5 text-rose-600" /> Sausage
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -540,7 +560,7 @@ export function CutSheetBuilder({
         <Card className="mb-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <span>🫀</span> Organs & Extras
+              <Heart className="h-5 w-5 text-red-600" /> Organs & Extras
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -684,8 +704,8 @@ export function CutSheetBuilder({
             <div>
               <Label className="text-sm text-gray-500">Animal Type</Label>
               <div className="font-medium flex items-center gap-2">
-                <span>{ANIMAL_INFO[state.animalType].icon}</span>
-                <span>{ANIMAL_INFO[state.animalType].label}</span>
+                <span className="shrink-0">{ANIMAL_ICONS[state.animalType].icon}</span>
+                <span>{ANIMAL_ICONS[state.animalType].label}</span>
               </div>
             </div>
 

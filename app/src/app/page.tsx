@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { ClipboardList, Phone, CalendarDays, Search, Calendar, Utensils, MapPin, MessageSquare, Bell, BarChart3, CheckCircle, Zap, Snowflake } from 'lucide-react'
 
 export default function HomePage() {
   return (
@@ -67,13 +68,13 @@ export default function HomePage() {
                 </div>
                 <div className="space-y-4">
                   {[
-                    { icon: '✓', label: 'Dropped Off', detail: 'Dec 18, 2025', complete: true },
-                    { icon: '✓', label: 'Hanging Weight', detail: '642 lbs', complete: true },
-                    { icon: '⚡', label: 'Cutting', detail: 'Est. Dec 22', active: true },
-                    { icon: '❄', label: 'Ready for Pickup', detail: "We'll notify you", pending: true },
+                    { icon: <CheckCircle className="h-5 w-5" />, label: 'Dropped Off', detail: 'Dec 18, 2025', complete: true },
+                    { icon: <CheckCircle className="h-5 w-5" />, label: 'Hanging Weight', detail: '642 lbs', complete: true },
+                    { icon: <Zap className="h-5 w-5" />, label: 'Cutting', detail: 'Est. Dec 22', active: true },
+                    { icon: <Snowflake className="h-5 w-5" />, label: 'Ready for Pickup', detail: "We'll notify you", pending: true },
                   ].map((step, i) => (
                     <div key={i} className="flex items-center gap-4">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg ${
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
                         step.complete ? 'bg-green-700 text-white' :
                         step.active ? 'bg-amber-500 text-white animate-pulse' :
                         'bg-gray-100 text-gray-400'
@@ -103,13 +104,13 @@ export default function HomePage() {
           </h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
-              { icon: '📋', title: 'Paper Cut Sheets', desc: 'Confusing forms and unclear options lead to errors and miscommunication.' },
-              { icon: '📞', title: 'Phone Tag', desc: 'Want to know when your animal will be ready? Good luck reaching anyone.' },
-              { icon: '📅', title: 'Scheduling Chaos', desc: 'Wait times of 6+ months with no visibility into availability.' },
-              { icon: '🔍', title: 'Zero Visibility', desc: 'Once dropped off, your animal vanishes. No tracking, no updates.' },
+              { icon: <ClipboardList className="h-8 w-8" />, title: 'Paper Cut Sheets', desc: 'Confusing forms and unclear options lead to errors and miscommunication.' },
+              { icon: <Phone className="h-8 w-8" />, title: 'Phone Tag', desc: 'Want to know when your animal will be ready? Good luck reaching anyone.' },
+              { icon: <CalendarDays className="h-8 w-8" />, title: 'Scheduling Chaos', desc: 'Wait times of 6+ months with no visibility into availability.' },
+              { icon: <Search className="h-8 w-8" />, title: 'Zero Visibility', desc: 'Once dropped off, your animal vanishes. No tracking, no updates.' },
             ].map((item, i) => (
               <div key={i} className="bg-white/10 rounded-xl p-6 backdrop-blur">
-                <div className="text-3xl mb-4">{item.icon}</div>
+                <div className="mb-4 text-green-300">{item.icon}</div>
                 <h3 className="font-semibold text-lg mb-2">{item.title}</h3>
                 <p className="text-green-100 text-sm">{item.desc}</p>
               </div>
@@ -129,15 +130,15 @@ export default function HomePage() {
           </div>
           <div className="grid md:grid-cols-3 gap-8">
             {[
-              { icon: '🗓️', title: 'Smart Scheduling', desc: 'See real-time availability. Book slots instantly. Automatic waitlist management.' },
-              { icon: '🥩', title: 'Visual Cut Sheets', desc: 'Interactive diagrams guide you through every cut. No more confusion.' },
-              { icon: '📍', title: 'Live Tracking', desc: 'Know exactly where your order is at every stage of processing.' },
-              { icon: '💬', title: 'Direct Messaging', desc: 'Skip the phone tag. Message your processor directly.' },
-              { icon: '🔔', title: 'Smart Notifications', desc: 'Get alerts for status changes, pickup ready, and slot openings.' },
-              { icon: '📊', title: 'Order History', desc: 'Every order documented. Weights, cuts, dates—all searchable.' },
+              { icon: <Calendar className="h-7 w-7 text-green-700" />, title: 'Smart Scheduling', desc: 'See real-time availability. Book slots instantly. Automatic waitlist management.' },
+              { icon: <Utensils className="h-7 w-7 text-green-700" />, title: 'Visual Cut Sheets', desc: 'Interactive diagrams guide you through every cut. No more confusion.' },
+              { icon: <MapPin className="h-7 w-7 text-green-700" />, title: 'Live Tracking', desc: 'Know exactly where your order is at every stage of processing.' },
+              { icon: <MessageSquare className="h-7 w-7 text-green-700" />, title: 'Direct Messaging', desc: 'Skip the phone tag. Message your processor directly.' },
+              { icon: <Bell className="h-7 w-7 text-green-700" />, title: 'Smart Notifications', desc: 'Get alerts for status changes, pickup ready, and slot openings.' },
+              { icon: <BarChart3 className="h-7 w-7 text-green-700" />, title: 'Order History', desc: 'Every order documented. Weights, cuts, dates—all searchable.' },
             ].map((item, i) => (
               <div key={i} className="bg-white rounded-xl p-6 shadow-sm border hover:shadow-md transition-shadow">
-                <div className="w-14 h-14 bg-green-50 rounded-xl flex items-center justify-center text-2xl mb-4">
+                <div className="w-14 h-14 bg-green-50 rounded-xl flex items-center justify-center mb-4">
                   {item.icon}
                 </div>
                 <h3 className="font-semibold text-lg mb-2">{item.title}</h3>

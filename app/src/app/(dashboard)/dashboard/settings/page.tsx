@@ -9,18 +9,19 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { useToast } from '@/hooks/use-toast'
-import { Check } from 'lucide-react'
+import { Check, Beef, PiggyBank, Rabbit, Flame, Drumstick } from 'lucide-react'
+import { GoatIcon } from '@/components/icons/AnimalIcons'
 import type { User, Organization } from '@/types/database'
 
 type LicenseType = 'usda' | 'state' | 'custom_exempt'
 
 const SERVICES_OPTIONS = [
-  { id: 'beef', label: 'Beef', icon: '🐄' },
-  { id: 'pork', label: 'Pork', icon: '🐷' },
-  { id: 'lamb', label: 'Lamb', icon: '🐑' },
-  { id: 'goat', label: 'Goat', icon: '🐐' },
-  { id: 'smoking', label: 'Smoking', icon: '🔥' },
-  { id: 'sausage', label: 'Sausage', icon: '🌭' },
+  { id: 'beef', label: 'Beef', icon: <Beef className="h-5 w-5 text-red-600" /> },
+  { id: 'pork', label: 'Pork', icon: <PiggyBank className="h-5 w-5 text-pink-600" /> },
+  { id: 'lamb', label: 'Lamb', icon: <Rabbit className="h-5 w-5 text-purple-600" /> },
+  { id: 'goat', label: 'Goat', icon: <GoatIcon className="h-5 w-5 text-amber-600" size={20} /> },
+  { id: 'smoking', label: 'Smoking', icon: <Flame className="h-5 w-5 text-orange-600" /> },
+  { id: 'sausage', label: 'Sausage', icon: <Drumstick className="h-5 w-5 text-rose-600" /> },
 ]
 
 const LICENSE_TYPES: { value: LicenseType; label: string }[] = [
@@ -369,7 +370,7 @@ export default function SettingsPage() {
                           <Check className="w-3 h-3 text-white" />
                         )}
                       </div>
-                      <span>{service.icon}</span>
+                      <span className="shrink-0">{service.icon}</span>
                       <span className="text-sm">{service.label}</span>
                     </button>
                   ))}

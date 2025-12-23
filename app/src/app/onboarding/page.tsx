@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Beef, Utensils } from 'lucide-react'
 import type { OrganizationType } from '@/types/database'
 
 export default function OnboardingPage() {
@@ -124,7 +125,9 @@ export default function OnboardingPage() {
               onClick={() => handleSelectType('producer')}
             >
               <CardHeader>
-                <div className="text-4xl mb-2">🐄</div>
+                <div className="mb-2">
+                  <Beef className="h-10 w-10 text-green-700" />
+                </div>
                 <CardTitle className="text-green-800">Producer</CardTitle>
                 <CardDescription>
                   I raise livestock and need processing services
@@ -145,7 +148,9 @@ export default function OnboardingPage() {
               onClick={() => handleSelectType('processor')}
             >
               <CardHeader>
-                <div className="text-4xl mb-2">🥩</div>
+                <div className="mb-2">
+                  <Utensils className="h-10 w-10 text-amber-700" />
+                </div>
                 <CardTitle className="text-amber-700">Processor</CardTitle>
                 <CardDescription>
                   I process livestock for producers
