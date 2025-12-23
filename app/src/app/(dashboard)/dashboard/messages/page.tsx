@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { MessageSquare, ChevronRight } from 'lucide-react'
+import { NewConversationButton } from './NewConversationButton'
 
 interface ProfileResult {
   organization_id: string | null
@@ -75,13 +76,36 @@ export default async function MessagesPage() {
 
   const conversationList = Array.from(conversations.values())
 
+  // Get the user's organization type to know what orgs they can message
+  const { data: userOrg } = await supabase
+    .from('organizations')
+    .select('type')
+    .eq('id', profile?.organization_id ?? '')
+    .single() as { data: { type: string } | null }
+
+  // Get available organizations to message (opposite type)
+  const targetType = userOrg?.type === 'producer' ? 'processor' : 'producer'
+  const { data: availableOrgs } = await supabase
+    .from('organizations')
+    .select('id, name, type')
+    .eq('type', targetType)
+    .eq('is_active', true)
+    .order('name') as { data: { id: string; name: string; type: string }[] | null }
+
+  // Filter out orgs we already have conversations with
+  const existingOrgIds = new Set(conversationList.map(c => c.orgId))
+  const newConversationOrgs = availableOrgs?.filter(org => !existingOrgIds.has(org.id)) || []
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Messages</h1>
-        <p className="text-gray-600">
-          Communicate with your {profile?.organization_id ? 'partners' : 'contacts'}
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Messages</h1>
+          <p className="text-gray-600">
+            Communicate with your {userOrg?.type === 'producer' ? 'processors' : 'producers'}
+          </p>
+        </div>
+        <NewConversationButton availableOrgs={newConversationOrgs} />
       </div>
 
       <Card>

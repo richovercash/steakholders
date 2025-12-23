@@ -66,7 +66,12 @@ export function useRealtimeNotifications({
         }
       )
       .subscribe((status) => {
-        console.log('[Realtime] Notification subscription status:', status)
+        if (status === 'SUBSCRIBED') {
+          console.log('[Realtime] Notifications subscribed')
+        } else if (status === 'CHANNEL_ERROR') {
+          // Realtime may not be enabled for this table - fail silently
+          console.warn('[Realtime] Notifications not available - enable Realtime for notifications table in Supabase dashboard')
+        }
       })
 
     channelRef.current = channel
