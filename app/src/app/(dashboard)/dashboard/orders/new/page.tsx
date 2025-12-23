@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Check } from 'lucide-react'
 
 interface Livestock {
   id: string
@@ -40,10 +40,31 @@ export default function NewOrderPage() {
   const preselectedProcessor = searchParams.get('processor')
   const preselectedDate = searchParams.get('date')
 
-  const [selectedLivestock, setSelectedLivestock] = useState('')
+  const [selectedLivestock, setSelectedLivestock] = useState<string[]>([])
   const [selectedProcessor, setSelectedProcessor] = useState(preselectedProcessor || '')
   const [scheduledDate, setScheduledDate] = useState(preselectedDate || '')
   const [notes, setNotes] = useState('')
+
+  // Toggle livestock selection
+  const toggleLivestock = (id: string) => {
+    setSelectedLivestock(prev =>
+      prev.includes(id)
+        ? prev.filter(x => x !== id)
+        : [...prev, id]
+    )
+  }
+
+  // Select all livestock
+  const selectAllLivestock = () => {
+    if (selectedLivestock.length === livestock.length) {
+      setSelectedLivestock([])
+    } else {
+      setSelectedLivestock(livestock.map(l => l.id))
+    }
+  }
+
+  // Filter by animal type
+  const [filterType, setFilterType] = useState<string>('all')
 
   useEffect(() => {
     async function loadData() {
@@ -128,28 +149,40 @@ export default function NewOrderPage() {
         return
       }
 
-      const orderData = {
-        producer_id: profile.organization_id,
-        processor_id: selectedProcessor,
-        livestock_id: selectedLivestock || null,
-        status: 'draft',
-        scheduled_drop_off: scheduledDate ? new Date(scheduledDate).toISOString() : null,
-        producer_notes: notes || null,
+      // Create orders for each selected animal (or one order with no animal if none selected)
+      const animalsToProcess = selectedLivestock.length > 0 ? selectedLivestock : [null]
+      const createdOrders: string[] = []
+
+      for (const livestockId of animalsToProcess) {
+        const orderData = {
+          producer_id: profile.organization_id,
+          processor_id: selectedProcessor,
+          livestock_id: livestockId,
+          status: 'draft',
+          scheduled_drop_off: scheduledDate ? new Date(scheduledDate).toISOString() : null,
+          producer_notes: notes || null,
+        }
+
+        const { data: newOrder, error: insertError } = await supabase
+          .from('processing_orders')
+          .insert(orderData as never)
+          .select('id')
+          .single() as { data: { id: string } | null; error: Error | null }
+
+        if (insertError || !newOrder) {
+          setError(insertError?.message || 'Failed to create order')
+          return
+        }
+
+        createdOrders.push(newOrder.id)
       }
 
-      const { data: newOrder, error: insertError } = await supabase
-        .from('processing_orders')
-        .insert(orderData as never)
-        .select('id')
-        .single() as { data: { id: string } | null; error: Error | null }
-
-      if (insertError || !newOrder) {
-        setError(insertError?.message || 'Failed to create order')
-        return
+      // If single order, go to order detail. If multiple, go to orders list
+      if (createdOrders.length === 1) {
+        router.push(`/dashboard/orders/${createdOrders[0]}`)
+      } else {
+        router.push('/dashboard/orders')
       }
-
-      // Redirect to the order detail page where they can create a cut sheet
-      router.push(`/dashboard/orders/${newOrder.id}`)
       router.refresh()
     } catch {
       setError('An unexpected error occurred')
@@ -213,29 +246,89 @@ export default function NewOrderPage() {
               )}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="livestock">Select Animal (optional)</Label>
-              <select
-                id="livestock"
-                className="w-full h-10 px-3 rounded-md border border-input bg-background"
-                value={selectedLivestock}
-                onChange={(e) => setSelectedLivestock(e.target.value)}
-              >
-                <option value="">Choose an animal...</option>
-                {livestock.map((animal) => (
-                  <option key={animal.id} value={animal.id}>
-                    {animal.animal_type.charAt(0).toUpperCase() + animal.animal_type.slice(1)}
-                    {animal.tag_number && ` #${animal.tag_number}`}
-                    {animal.name && ` (${animal.name})`}
-                  </option>
-                ))}
-              </select>
-              {livestock.length === 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label>Select Animals (optional)</Label>
+                {livestock.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <select
+                      className="text-sm border rounded px-2 py-1"
+                      value={filterType}
+                      onChange={(e) => setFilterType(e.target.value)}
+                    >
+                      <option value="all">All Types</option>
+                      <option value="beef">Beef</option>
+                      <option value="pork">Pork</option>
+                      <option value="lamb">Lamb</option>
+                      <option value="goat">Goat</option>
+                    </select>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={selectAllLivestock}
+                    >
+                      {selectedLivestock.length === livestock.length ? 'Deselect All' : 'Select All'}
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {livestock.length > 0 ? (
+                <div className="border rounded-lg divide-y max-h-64 overflow-y-auto">
+                  {livestock
+                    .filter(animal => filterType === 'all' || animal.animal_type === filterType)
+                    .map((animal) => {
+                      const isSelected = selectedLivestock.includes(animal.id)
+                      return (
+                        <div
+                          key={animal.id}
+                          onClick={() => toggleLivestock(animal.id)}
+                          className={`flex items-center gap-3 p-3 cursor-pointer transition-colors ${
+                            isSelected ? 'bg-green-50' : 'hover:bg-gray-50'
+                          }`}
+                        >
+                          <div
+                            className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                              isSelected ? 'bg-green-600 border-green-600' : 'border-gray-300'
+                            }`}
+                          >
+                            {isSelected && <Check className="w-3 h-3 text-white" />}
+                          </div>
+                          <div className="flex-1">
+                            <div className="font-medium">
+                              {animal.animal_type.charAt(0).toUpperCase() + animal.animal_type.slice(1)}
+                              {animal.tag_number && ` #${animal.tag_number}`}
+                            </div>
+                            {animal.name && (
+                              <div className="text-sm text-gray-500">{animal.name}</div>
+                            )}
+                          </div>
+                          <span className={`text-xs px-2 py-1 rounded-full ${
+                            animal.animal_type === 'beef' ? 'bg-red-100 text-red-700' :
+                            animal.animal_type === 'pork' ? 'bg-pink-100 text-pink-700' :
+                            animal.animal_type === 'lamb' ? 'bg-purple-100 text-purple-700' :
+                            'bg-amber-100 text-amber-700'
+                          }`}>
+                            {animal.animal_type}
+                          </span>
+                        </div>
+                      )
+                    })}
+                </div>
+              ) : (
                 <p className="text-sm text-gray-500">
                   No animals on farm.{' '}
                   <Link href="/dashboard/livestock/new" className="text-green-700 hover:underline">
                     Add one first
                   </Link>
+                </p>
+              )}
+
+              {selectedLivestock.length > 0 && (
+                <p className="text-sm text-green-700 font-medium">
+                  {selectedLivestock.length} animal{selectedLivestock.length !== 1 ? 's' : ''} selected
+                  {selectedLivestock.length > 1 && ' - One order will be created per animal'}
                 </p>
               )}
             </div>
@@ -269,7 +362,12 @@ export default function NewOrderPage() {
                 className="bg-green-700 hover:bg-green-800"
                 disabled={loading || !selectedProcessor}
               >
-                {loading ? 'Creating...' : 'Create Order'}
+                {loading
+                  ? 'Creating...'
+                  : selectedLivestock.length > 1
+                    ? `Create ${selectedLivestock.length} Orders`
+                    : 'Create Order'
+                }
               </Button>
               <Link href="/dashboard/orders">
                 <Button type="button" variant="outline">
