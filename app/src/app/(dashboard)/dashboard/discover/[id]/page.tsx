@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { MapPin, Phone, Mail, Calendar, Clock, ArrowLeft } from 'lucide-react'
+import { MapPin, Phone, Mail, Calendar, Clock, ArrowLeft, MessageSquare } from 'lucide-react'
 import Link from 'next/link'
 import type { Organization } from '@/types/database'
 
@@ -219,10 +219,16 @@ export default async function ProcessorDetailPage({
       </Card>
 
       {/* Action */}
-      <div className="flex gap-4">
+      <div className="flex flex-wrap gap-4">
         <Link href={`/dashboard/orders/new?processor=${processor.id}`}>
           <Button className="bg-green-700 hover:bg-green-800">
             Create Order with This Processor
+          </Button>
+        </Link>
+        <Link href={`/dashboard/messages/${processor.id}`}>
+          <Button variant="outline">
+            <MessageSquare className="h-4 w-4 mr-2" />
+            Send Message
           </Button>
         </Link>
         <Link href="/dashboard/discover">

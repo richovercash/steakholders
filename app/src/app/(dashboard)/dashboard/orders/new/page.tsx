@@ -103,7 +103,7 @@ export default function NewOrderPage() {
     }
 
     loadData()
-  }, [supabase, preselectedProcessor])
+  }, [supabase, preselectedProcessor, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

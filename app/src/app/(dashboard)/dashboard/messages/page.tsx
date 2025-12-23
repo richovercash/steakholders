@@ -1,6 +1,7 @@
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { MessageSquare } from 'lucide-react'
+import { MessageSquare, ChevronRight } from 'lucide-react'
 
 interface ProfileResult {
   organization_id: string | null
@@ -94,9 +95,10 @@ export default async function MessagesPage() {
           {conversationList.length > 0 ? (
             <div className="divide-y">
               {conversationList.map((conv) => (
-                <div
+                <Link
                   key={conv.orgId}
-                  className="flex items-center justify-between py-4 hover:bg-gray-50 -mx-4 px-4 cursor-pointer transition-colors"
+                  href={`/dashboard/messages/${conv.orgId}`}
+                  className="flex items-center justify-between py-4 hover:bg-gray-50 -mx-4 px-4 transition-colors"
                 >
                   <div className="flex items-center gap-4">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg ${
@@ -118,10 +120,13 @@ export default async function MessagesPage() {
                       </p>
                     </div>
                   </div>
-                  <div className="text-sm text-gray-400">
-                    {new Date(conv.lastMessage.created_at).toLocaleDateString()}
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-400">
+                      {new Date(conv.lastMessage.created_at).toLocaleDateString()}
+                    </span>
+                    <ChevronRight className="h-4 w-4 text-gray-400" />
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           ) : (

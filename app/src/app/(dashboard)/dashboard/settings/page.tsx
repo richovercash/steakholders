@@ -10,7 +10,9 @@ import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { useToast } from '@/hooks/use-toast'
 import { Check } from 'lucide-react'
-import type { User, Organization, LicenseType } from '@/types/database'
+import type { User, Organization } from '@/types/database'
+
+type LicenseType = 'usda' | 'state' | 'custom_exempt'
 
 const SERVICES_OPTIONS = [
   { id: 'beef', label: 'Beef', icon: '🐄' },
