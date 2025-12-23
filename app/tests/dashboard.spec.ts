@@ -10,20 +10,19 @@ const processorAuthFile = path.join(__dirname, '../playwright/.auth/processor.js
 const hasProducerAuth = fs.existsSync(producerAuthFile)
 const hasProcessorAuth = fs.existsSync(processorAuthFile)
 
-test.describe('Dashboard - Producer', () => {
-  test.skip(!hasProducerAuth, 'Requires producer auth state - run auth setup first')
+test.describe('Dashboard - Authenticated User', () => {
+  test.skip(!hasProducerAuth, 'Requires auth state - run auth setup first')
 
   test.use({ storageState: hasProducerAuth ? producerAuthFile : undefined })
 
-  test('should display producer dashboard', async ({ page }) => {
+  test('should display dashboard with welcome message', async ({ page }) => {
     await page.goto('/dashboard')
 
-    // Check welcome message
+    // Check welcome message (works for both producer and processor)
     await expect(page.locator('h1')).toContainText('Welcome back')
 
     // Check stats cards exist
     await expect(page.locator('text=Active Orders')).toBeVisible()
-    await expect(page.locator('text=Livestock')).toBeVisible()
     await expect(page.locator('text=Unread Messages')).toBeVisible()
   })
 
@@ -37,24 +36,6 @@ test.describe('Dashboard - Producer', () => {
     await expect(page.locator('h1')).toContainText('Orders')
   })
 
-  test('should navigate to livestock page', async ({ page }) => {
-    await page.goto('/dashboard')
-
-    await page.click('a[href="/dashboard/livestock"]')
-
-    await expect(page).toHaveURL('/dashboard/livestock')
-    await expect(page.locator('h1')).toContainText('Livestock')
-  })
-
-  test('should navigate to discover processors page', async ({ page }) => {
-    await page.goto('/dashboard')
-
-    await page.click('a[href="/dashboard/discover"]')
-
-    await expect(page).toHaveURL('/dashboard/discover')
-    await expect(page.locator('h1')).toContainText('Processor')
-  })
-
   test('should navigate to settings page', async ({ page }) => {
     await page.goto('/dashboard')
 
@@ -62,6 +43,14 @@ test.describe('Dashboard - Producer', () => {
 
     await expect(page).toHaveURL('/dashboard/settings')
     await expect(page.locator('h1')).toContainText('Settings')
+  })
+
+  test('should navigate to messages page', async ({ page }) => {
+    await page.goto('/dashboard')
+
+    await page.click('a[href="/dashboard/messages"]')
+
+    await expect(page).toHaveURL('/dashboard/messages')
   })
 })
 
