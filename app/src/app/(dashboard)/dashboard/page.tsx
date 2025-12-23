@@ -1,7 +1,9 @@
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { ClipboardList, Calendar, Truck, MessageSquare } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { ClipboardList, Calendar, Truck, MessageSquare, AlertCircle, ArrowRight } from 'lucide-react'
 import type { OrganizationType } from '@/types/database'
 
 interface ProfileWithOrg {
@@ -21,6 +23,7 @@ interface OrderWithRelations {
   status: string
   processing_stage: string
   created_at: string
+  scheduled_drop_off: string | null
   producer: { name: string } | null
   processor: { name: string } | null
   livestock: { tag_number: string | null; animal_type: string } | null
@@ -60,6 +63,24 @@ export default async function DashboardPage() {
     )
     .order('created_at', { ascending: false })
     .limit(5) as { data: OrderWithRelations[] | null }
+
+  // Get pending orders for processors (orders awaiting confirmation)
+  let pendingOrders: OrderWithRelations[] = []
+  if (!isProducer && organization?.id) {
+    const { data: pending } = await supabase
+      .from('processing_orders')
+      .select(`
+        *,
+        producer:organizations!producer_id(name),
+        processor:organizations!processor_id(name),
+        livestock(tag_number, animal_type)
+      `)
+      .eq('processor_id', organization.id)
+      .eq('status', 'submitted')
+      .order('created_at', { ascending: true }) as { data: OrderWithRelations[] | null }
+
+    pendingOrders = pending || []
+  }
 
   // Get order stats
   const { count: activeOrders } = await supabase
@@ -207,6 +228,62 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Pending Orders for Processors */}
+      {!isProducer && pendingOrders.length > 0 && (
+        <Card className="border-amber-200 bg-amber-50">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-5 w-5 text-amber-600" />
+                <CardTitle className="text-amber-800">Pending Orders</CardTitle>
+              </div>
+              <Badge className="bg-amber-600">{pendingOrders.length} awaiting confirmation</Badge>
+            </div>
+            <CardDescription className="text-amber-700">
+              These orders need your review and confirmation
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {pendingOrders.map((order) => (
+                <div
+                  key={order.id}
+                  className="flex items-center justify-between p-4 bg-white rounded-lg border border-amber-200"
+                >
+                  <div className="flex items-center gap-4">
+                    <div>
+                      <p className="font-medium">
+                        Order #{order.order_number}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {order.producer?.name}
+                        {order.livestock && (
+                          <span>
+                            {' '}&middot; {order.livestock.animal_type}{' '}
+                            {order.livestock.tag_number && `#${order.livestock.tag_number}`}
+                          </span>
+                        )}
+                      </p>
+                      {order.scheduled_drop_off && (
+                        <p className="text-xs text-amber-600 mt-1">
+                          Requested: {new Date(order.scheduled_drop_off).toLocaleDateString()}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <Link href={`/dashboard/orders/${order.id}`}>
+                    <Button size="sm" className="bg-amber-600 hover:bg-amber-700">
+                      Review
+                      <ArrowRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </Link>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Recent Orders */}
       <Card>
