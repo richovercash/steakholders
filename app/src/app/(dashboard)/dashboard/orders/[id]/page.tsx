@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { ArrowLeft, FileText, Calendar, Truck, Package, CheckCircle, Edit2, Save, X } from 'lucide-react'
+import { notifyOrderStatusChange, notifyProcessingStageChange } from '@/lib/notifications/actions'
 import type { AnimalType, OrderStatus, ProcessingStage, OrganizationType } from '@/types/database'
 
 interface OrderWithRelations {
@@ -87,7 +88,7 @@ export default function OrderDetailPage({ params }: PageProps) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [userRole, setUserRole] = useState<OrganizationType | null>(null)
-  const [organizationId, setOrganizationId] = useState<string | null>(null)
+  const [, setOrganizationId] = useState<string | null>(null)
   const [isEditing, setIsEditing] = useState(false)
   const router = useRouter()
   const supabase = createClient()
@@ -264,6 +265,15 @@ export default function OrderDetailPage({ params }: PageProps) {
     if (updateError) {
       alert('Error updating status: ' + updateError.message)
     } else {
+      // Send notification
+      await notifyOrderStatusChange({
+        orderId: order.id,
+        orderNumber: order.order_number,
+        newStatus,
+        producerOrgId: order.producer.id,
+        processorOrgId: order.processor.id,
+        animalType: order.livestock?.animal_type,
+      })
       await loadOrder()
     }
 
@@ -280,6 +290,10 @@ export default function OrderDetailPage({ params }: PageProps) {
 
     // Auto-update status based on stage
     let newStatus = order.status
+    const statusChanged = nextStage === 'received' && order.status === 'confirmed' ||
+                          nextStage === 'ready' ||
+                          nextStage === 'picked_up'
+
     if (nextStage === 'received' && order.status === 'confirmed') {
       newStatus = 'in_progress'
     } else if (nextStage === 'ready') {
@@ -298,6 +312,25 @@ export default function OrderDetailPage({ params }: PageProps) {
     if (updateError) {
       alert('Error advancing stage: ' + updateError.message)
     } else {
+      // Send notification for stage change
+      if (statusChanged) {
+        await notifyOrderStatusChange({
+          orderId: order.id,
+          orderNumber: order.order_number,
+          newStatus,
+          producerOrgId: order.producer.id,
+          processorOrgId: order.processor.id,
+          animalType: order.livestock?.animal_type,
+        })
+      } else {
+        await notifyProcessingStageChange(
+          order.id,
+          order.order_number,
+          order.producer.id,
+          nextStage,
+          order.livestock?.animal_type
+        )
+      }
       await loadOrder()
     }
 
