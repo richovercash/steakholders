@@ -10,6 +10,8 @@ interface MessageWithSender extends Message {
 export async function getOrganizationById(orgId: string): Promise<Organization | null> {
   const supabase = await createClient()
 
+  console.log('[getOrganizationById] Looking up org:', orgId)
+
   const { data, error } = await supabase
     .from('organizations')
     .select('*')
@@ -17,10 +19,17 @@ export async function getOrganizationById(orgId: string): Promise<Organization |
     .single()
 
   if (error) {
-    console.error('Error fetching organization:', error)
+    console.error('[getOrganizationById] Error:', error.message, error.code, error.details)
+    // Try without .single() to see if the issue is multiple or no results
+    const { data: allData, error: allError } = await supabase
+      .from('organizations')
+      .select('id, name, type')
+      .limit(10)
+    console.log('[getOrganizationById] Available orgs sample:', allData, allError?.message)
     return null
   }
 
+  console.log('[getOrganizationById] Found:', data?.name)
   return data as Organization
 }
 
@@ -51,7 +60,12 @@ export async function getUserProfile(): Promise<{ id: string; organization_id: s
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
+  if (!user) {
+    console.log('[getUserProfile] No user found')
+    return null
+  }
+
+  console.log('[getUserProfile] Auth user id:', user.id)
 
   const { data, error } = await supabase
     .from('users')
@@ -59,8 +73,10 @@ export async function getUserProfile(): Promise<{ id: string; organization_id: s
     .eq('auth_id', user.id)
     .single() as { data: { id: string; organization_id: string | null } | null; error: Error | null }
 
+  console.log('[getUserProfile] Profile data:', data, 'Error:', error?.message)
+
   if (error || !data?.organization_id) {
-    console.error('Error fetching user profile:', error)
+    console.error('[getUserProfile] Error fetching user profile:', error)
     return null
   }
 
@@ -111,4 +127,43 @@ export async function markMessagesAsRead(
     .eq('sender_org_id', senderOrgId)
     .eq('recipient_org_id', recipientOrgId)
     .is('read_at', null)
+}
+
+export async function getNewMessages(
+  myOrgId: string,
+  partnerOrgId: string,
+  afterTimestamp: string
+): Promise<MessageWithSender[]> {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('messages')
+    .select(`
+      *,
+      sender:users!sender_id(full_name)
+    `)
+    .or(`and(sender_org_id.eq.${myOrgId},recipient_org_id.eq.${partnerOrgId}),and(sender_org_id.eq.${partnerOrgId},recipient_org_id.eq.${myOrgId})`)
+    .gt('created_at', afterTimestamp)
+    .order('created_at', { ascending: true })
+
+  if (error) {
+    console.error('Error fetching new messages:', error)
+    return []
+  }
+
+  // Mark incoming messages as read
+  if (data && data.length > 0) {
+    const incomingMessageIds = data
+      .filter(msg => msg.sender_org_id === partnerOrgId && !msg.read_at)
+      .map(msg => msg.id)
+
+    if (incomingMessageIds.length > 0) {
+      await supabase
+        .from('messages')
+        .update({ read_at: new Date().toISOString() } as never)
+        .in('id', incomingMessageIds)
+    }
+  }
+
+  return (data || []) as MessageWithSender[]
 }
