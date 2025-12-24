@@ -75,11 +75,16 @@ const ANIMAL_ICONS: Record<AnimalType, { icon: React.ReactNode; label: string }>
   goat: { icon: <GoatIcon className="h-5 w-5" size={20} />, label: 'Goat' },
 }
 
+// Split allocation for primals that allow multiple cuts
+// Key is primalId, value is record of cutId -> percentage (0-100)
+type PrimalSplitAllocations = Record<string, Record<string, number>>
+
 interface PrimalCutSheetState {
   animalType: AnimalType
   hangingWeight: number | null
   selectedCuts: CutSelection[]
   cutParameters: Record<string, Record<string, unknown>>
+  splitAllocations: PrimalSplitAllocations  // For primals with allowSplit: true
   groundType: GroundType | null
   groundPackageWeight: number
   pattySize: PattySize | null
@@ -110,6 +115,7 @@ const DEFAULT_STATE: PrimalCutSheetState = {
   hangingWeight: null,
   selectedCuts: [],
   cutParameters: {},
+  splitAllocations: {},
   groundType: 'bulk',
   groundPackageWeight: 1,
   pattySize: null,
@@ -125,6 +131,277 @@ const DEFAULT_STATE: PrimalCutSheetState = {
   specialInstructions: '',
 }
 
+// Split allocation component for primals that allow splitting between multiple cuts
+function PrimalSplitAllocator({
+  primalName,
+  selectedCuts,
+  allocations,
+  onUpdateAllocation,
+}: {
+  primalName: string
+  selectedCuts: { id: string; name: string }[]
+  allocations: Record<string, number>
+  onUpdateAllocation: (cutId: string, percentage: number) => void
+}) {
+  // Calculate total and remaining
+  const total = Object.values(allocations).reduce((sum, val) => sum + val, 0)
+  const isValid = Math.abs(total - 100) < 0.01
+
+  // Auto-distribute evenly if no allocations set
+  const effectiveAllocations = useMemo(() => {
+    if (selectedCuts.length === 0) return {}
+
+    // If allocations are empty, distribute evenly
+    const hasAllocations = selectedCuts.some(cut => allocations[cut.id] !== undefined)
+    if (!hasAllocations) {
+      const evenSplit = Math.floor(100 / selectedCuts.length)
+      const result: Record<string, number> = {}
+      selectedCuts.forEach((cut, i) => {
+        // Give the remainder to the last cut
+        result[cut.id] = i === selectedCuts.length - 1
+          ? 100 - (evenSplit * (selectedCuts.length - 1))
+          : evenSplit
+      })
+      return result
+    }
+
+    return allocations
+  }, [selectedCuts, allocations])
+
+  if (selectedCuts.length < 2) return null
+
+  return (
+    <div className="mt-4 p-4 rounded-lg bg-green-50 border border-green-200">
+      <div className="flex items-center gap-2 mb-3">
+        <span className="font-medium text-green-800">
+          Split {primalName} Allocation
+        </span>
+        <span className={`text-xs px-2 py-0.5 rounded ${
+          isValid ? 'bg-green-200 text-green-800' : 'bg-amber-200 text-amber-800'
+        }`}>
+          {total.toFixed(0)}% allocated
+        </span>
+      </div>
+
+      <p className="text-sm text-green-700 mb-4">
+        Divide this primal between your selected cuts. Allocations must total 100%.
+      </p>
+
+      <div className="space-y-3">
+        {selectedCuts.map(cut => {
+          const value = effectiveAllocations[cut.id] ?? 0
+          return (
+            <div key={cut.id} className="flex items-center gap-3">
+              <span className="flex-1 text-sm font-medium text-gray-700 min-w-[120px]">
+                {cut.name}
+              </span>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={value}
+                onChange={(e) => onUpdateAllocation(cut.id, parseInt(e.target.value))}
+                className="flex-[2] h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-green-600"
+              />
+              <div className="w-20 flex items-center gap-1">
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={value}
+                  onChange={(e) => onUpdateAllocation(cut.id, Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
+                  className="w-14 text-sm border rounded px-2 py-1 text-center"
+                />
+                <span className="text-sm text-gray-500">%</span>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {!isValid && (
+        <div className="mt-3 text-sm text-amber-700 flex items-center gap-2">
+          <AlertCircle className="w-4 h-4" />
+          {total < 100
+            ? `${(100 - total).toFixed(0)}% remaining to allocate`
+            : `${(total - 100).toFixed(0)}% over-allocated - please reduce`
+          }
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Parameter input component for cut options
+function CutParameterInputs({
+  cut,
+  values,
+  onChange,
+}: {
+  cut: CutChoice
+  values: Record<string, unknown>
+  onChange: (param: string, value: unknown) => void
+}) {
+  if (!cut.parameters) return null
+
+  const params = cut.parameters
+
+  return (
+    <div className="mt-3 pt-3 border-t border-green-200 grid grid-cols-2 gap-3">
+      {/* Thickness */}
+      {params.thickness && (
+        <div>
+          <label className="text-xs font-medium text-gray-600 block mb-1">
+            Thickness {params.thickness.unit && `(${params.thickness.unit})`}
+          </label>
+          <select
+            value={String(values.thickness ?? params.thickness.default)}
+            onChange={(e) => onChange('thickness', e.target.value)}
+            className="w-full text-sm border rounded px-2 py-1.5 bg-white"
+          >
+            {params.thickness.options.map((opt) => (
+              <option key={String(opt)} value={String(opt)}>
+                {typeof opt === 'number' ? `${opt}"` : opt}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* Per Package */}
+      {params.perPackage && (
+        <div>
+          <label className="text-xs font-medium text-gray-600 block mb-1">
+            Per Package
+          </label>
+          <select
+            value={String(values.perPackage ?? params.perPackage.default)}
+            onChange={(e) => onChange('perPackage', parseInt(e.target.value))}
+            className="w-full text-sm border rounded px-2 py-1.5 bg-white"
+          >
+            {params.perPackage.options.map((opt) => (
+              <option key={opt} value={opt}>
+                {opt} {opt === 1 ? 'piece' : 'pieces'}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* Weight */}
+      {params.weight && (
+        <div>
+          <label className="text-xs font-medium text-gray-600 block mb-1">
+            Weight {params.weight.unit && `(${params.weight.unit})`}
+          </label>
+          <select
+            value={String(values.weight ?? params.weight.default)}
+            onChange={(e) => onChange('weight', parseFloat(e.target.value))}
+            className="w-full text-sm border rounded px-2 py-1.5 bg-white"
+          >
+            {params.weight.options.map((opt) => (
+              <option key={opt} value={opt}>
+                {opt} lbs
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* Size */}
+      {params.size && (
+        <div>
+          <label className="text-xs font-medium text-gray-600 block mb-1">
+            Size
+          </label>
+          <select
+            value={String(values.size ?? params.size.default)}
+            onChange={(e) => onChange('size', e.target.value)}
+            className="w-full text-sm border rounded px-2 py-1.5 bg-white"
+          >
+            {params.size.options.map((opt) => (
+              <option key={opt} value={opt}>
+                {opt}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* Style */}
+      {params.style && (
+        <div>
+          <label className="text-xs font-medium text-gray-600 block mb-1">
+            Style
+          </label>
+          <select
+            value={String(values.style ?? params.style.default)}
+            onChange={(e) => onChange('style', e.target.value)}
+            className="w-full text-sm border rounded px-2 py-1.5 bg-white"
+          >
+            {params.style.options.map((opt) => (
+              <option key={opt} value={opt}>
+                {opt}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* Package Size (for ground meat, etc) */}
+      {params.packageSize && (
+        <div>
+          <label className="text-xs font-medium text-gray-600 block mb-1">
+            Package Size
+          </label>
+          <select
+            value={String(values.packageSize ?? params.packageSize.default)}
+            onChange={(e) => onChange('packageSize', parseFloat(e.target.value))}
+            className="w-full text-sm border rounded px-2 py-1.5 bg-white"
+          >
+            {params.packageSize.options.map((opt) => (
+              <option key={opt} value={opt}>
+                {opt} lbs
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* Boolean options */}
+      {params.boneIn && (
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            id={`${cut.id}-bonein`}
+            checked={Boolean(values.boneIn ?? params.boneIn.default)}
+            onChange={(e) => onChange('boneIn', e.target.checked)}
+            className="rounded border-gray-300"
+          />
+          <label htmlFor={`${cut.id}-bonein`} className="text-xs font-medium text-gray-600">
+            {params.boneIn.label || 'Bone-in'}
+          </label>
+        </div>
+      )}
+
+      {params.frenched && (
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            id={`${cut.id}-frenched`}
+            checked={Boolean(values.frenched ?? params.frenched.default)}
+            onChange={(e) => onChange('frenched', e.target.checked)}
+            className="rounded border-gray-300"
+          />
+          <label htmlFor={`${cut.id}-frenched`} className="text-xs font-medium text-gray-600">
+            {params.frenched.label || 'Frenched'}
+          </label>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // Individual cut item component
 function CutChoiceItem({
   cut,
@@ -133,8 +410,10 @@ function CutChoiceItem({
   disabledReason,
   hasWarning,
   warningMessage,
+  parameterValues,
   onToggle,
   onShowWouldDisable,
+  onParameterChange,
 }: {
   cut: CutChoice
   isSelected: boolean
@@ -142,8 +421,10 @@ function CutChoiceItem({
   disabledReason?: string
   hasWarning: boolean
   warningMessage?: string
+  parameterValues: Record<string, unknown>
   onToggle: (cut: CutChoice) => void
   onShowWouldDisable: (cutId: string) => void
+  onParameterChange: (cutId: string, param: string, value: unknown) => void
 }) {
   return (
     <TooltipProvider>
@@ -215,6 +496,15 @@ function CutChoiceItem({
                 See what this disables
               </button>
             )}
+
+            {/* Parameter inputs when selected */}
+            {isSelected && cut.parameters && (
+              <CutParameterInputs
+                cut={cut}
+                values={parameterValues}
+                onChange={(param, value) => onParameterChange(cut.id, param, value)}
+              />
+            )}
           </div>
         </div>
 
@@ -238,17 +528,25 @@ function CutChoiceItem({
 function PrimalSection({
   primal,
   selectedCuts,
+  cutParameters,
+  splitAllocations,
   availability,
   warnings,
   onToggleCut,
   onShowWouldDisable,
+  onParameterChange,
+  onSplitAllocationChange,
 }: {
   primal: FilteredPrimal | Primal
   selectedCuts: CutSelection[]
+  cutParameters: Record<string, Record<string, unknown>>
+  splitAllocations: Record<string, number>
   availability: ReturnType<typeof getCutAvailability>
   warnings: ValidationWarning[]
   onToggleCut: (cut: CutChoice) => void
   onShowWouldDisable: (cutId: string) => void
+  onParameterChange: (cutId: string, param: string, value: unknown) => void
+  onSplitAllocationChange: (cutId: string, percentage: number) => void
 }) {
   const [isOpen, setIsOpen] = useState(true)
   const selectedIds = new Set(selectedCuts.map(s => s.cutId))
@@ -330,8 +628,10 @@ function PrimalSection({
                       disabledReason={avail?.reason}
                       hasWarning={!!warning}
                       warningMessage={warning?.message}
+                      parameterValues={cutParameters[cut.id] || {}}
                       onToggle={onToggleCut}
                       onShowWouldDisable={onShowWouldDisable}
+                      onParameterChange={onParameterChange}
                     />
                   )
                 })}
@@ -367,8 +667,10 @@ function PrimalSection({
                           disabledReason={avail?.reason}
                           hasWarning={!!warning}
                           warningMessage={warning?.message}
+                          parameterValues={cutParameters[cut.id] || {}}
                           onToggle={onToggleCut}
                           onShowWouldDisable={onShowWouldDisable}
+                          onParameterChange={onParameterChange}
                         />
                       )
                     })}
@@ -376,6 +678,31 @@ function PrimalSection({
                 </div>
               )
             })}
+
+            {/* Split Allocation UI - show when primal allows split and multiple cuts selected */}
+            {primal.allowSplit && (() => {
+              // Get all selected cuts from this primal (main + subsections)
+              const selectedCutsInPrimal = [
+                ...enabledChoices.filter(c => selectedIds.has(c.id)),
+                ...(primal.subSections
+                  ? Object.values(primal.subSections).flatMap(sub =>
+                      sub.choices.filter(c => !(c as FilteredCutChoice).disabled && selectedIds.has(c.id))
+                    )
+                  : []
+                )
+              ]
+
+              if (selectedCutsInPrimal.length < 2) return null
+
+              return (
+                <PrimalSplitAllocator
+                  primalName={primal.displayName}
+                  selectedCuts={selectedCutsInPrimal.map(c => ({ id: c.id, name: c.name }))}
+                  allocations={splitAllocations}
+                  onUpdateAllocation={onSplitAllocationChange}
+                />
+              )
+            })()}
           </CardContent>
         </CollapsibleContent>
       </Card>
@@ -445,7 +772,43 @@ export function PrimalCutSheetBuilder({
     [state.animalType, state.selectedCuts]
   )
 
-  const hasErrors = !validationResult.isValid
+  // Validate split allocations - check if any primals with allowSplit have multiple selected cuts
+  // and if so, ensure their allocations total 100%
+  const splitAllocationErrors = useMemo(() => {
+    const errors: { primalName: string; message: string }[] = []
+    const selectedIds = new Set(state.selectedCuts.map(s => s.cutId))
+
+    for (const [primalId, primal] of Object.entries(animalSchema.primals)) {
+      if (!primal.allowSplit) continue
+
+      // Get all selected cuts from this primal
+      const selectedInPrimal = [
+        ...primal.choices.filter(c => selectedIds.has(c.id)),
+        ...(primal.subSections
+          ? Object.values(primal.subSections).flatMap(sub => sub.choices.filter(c => selectedIds.has(c.id)))
+          : []
+        )
+      ]
+
+      if (selectedInPrimal.length < 2) continue
+
+      // Check if allocations total 100%
+      const allocations = state.splitAllocations[primalId] || {}
+      const total = selectedInPrimal.reduce((sum, cut) => sum + (allocations[cut.id] || 0), 0)
+
+      // Allow some tolerance for floating point
+      if (Math.abs(total - 100) > 0.5) {
+        errors.push({
+          primalName: primal.displayName,
+          message: `${primal.displayName} split allocation must total 100% (currently ${total.toFixed(0)}%)`,
+        })
+      }
+    }
+
+    return errors
+  }, [animalSchema.primals, state.selectedCuts, state.splitAllocations])
+
+  const hasErrors = !validationResult.isValid || splitAllocationErrors.length > 0
 
   // Stats for summary
   const stats = useMemo(() => {
@@ -463,10 +826,52 @@ export function PrimalCutSheetBuilder({
       const existingIndex = prev.selectedCuts.findIndex(s => s.cutId === cut.id)
 
       if (existingIndex >= 0) {
-        // Remove cut
+        // Remove cut - also clean up split allocations if needed
+        const newSelectedCuts = prev.selectedCuts.filter((_, i) => i !== existingIndex)
+        const newSplitAllocations = { ...prev.splitAllocations }
+
+        // Check all primals to see if we need to clean up allocations
+        for (const [primalId, primal] of Object.entries(animalSchema.primals)) {
+          if (!primal.allowSplit) continue
+
+          // Get remaining selected cuts in this primal
+          const remainingInPrimal = [
+            ...primal.choices.filter(c => newSelectedCuts.some(s => s.cutId === c.id)),
+            ...(primal.subSections
+              ? Object.values(primal.subSections).flatMap(sub =>
+                  sub.choices.filter(c => newSelectedCuts.some(s => s.cutId === c.id))
+                )
+              : []
+            )
+          ]
+
+          // If only one or zero cuts remain, clear allocations for this primal
+          if (remainingInPrimal.length < 2) {
+            delete newSplitAllocations[primalId]
+          } else {
+            // Remove the deselected cut from allocations and redistribute
+            if (newSplitAllocations[primalId]?.[cut.id]) {
+              const oldAllocations = newSplitAllocations[primalId]
+              delete oldAllocations[cut.id]
+              // Normalize remaining to 100%
+              const remaining = Object.entries(oldAllocations)
+              if (remaining.length > 0) {
+                const evenSplit = Math.floor(100 / remaining.length)
+                newSplitAllocations[primalId] = {}
+                remaining.forEach(([cId], i) => {
+                  newSplitAllocations[primalId][cId] = i === remaining.length - 1
+                    ? 100 - (evenSplit * (remaining.length - 1))
+                    : evenSplit
+                })
+              }
+            }
+          }
+        }
+
         return {
           ...prev,
-          selectedCuts: prev.selectedCuts.filter((_, i) => i !== existingIndex),
+          selectedCuts: newSelectedCuts,
+          splitAllocations: newSplitAllocations,
         }
       } else {
         // Add cut and any required cuts
@@ -479,10 +884,42 @@ export function PrimalCutSheetBuilder({
             .map(rc => ({ cutId: rc.id })),
         ]
 
-        return { ...prev, selectedCuts: newSelections }
+        // Check if we need to initialize split allocations for allowSplit primals
+        const newSplitAllocations = { ...prev.splitAllocations }
+        for (const [primalId, primal] of Object.entries(animalSchema.primals)) {
+          if (!primal.allowSplit) continue
+
+          // Get selected cuts in this primal after adding the new cut
+          const selectedInPrimal = [
+            ...primal.choices.filter(c => newSelections.some(s => s.cutId === c.id)),
+            ...(primal.subSections
+              ? Object.values(primal.subSections).flatMap(sub =>
+                  sub.choices.filter(c => newSelections.some(s => s.cutId === c.id))
+                )
+              : []
+            )
+          ]
+
+          // If now has 2+ cuts, initialize even split
+          if (selectedInPrimal.length >= 2) {
+            const evenSplit = Math.floor(100 / selectedInPrimal.length)
+            newSplitAllocations[primalId] = {}
+            selectedInPrimal.forEach((c, i) => {
+              newSplitAllocations[primalId][c.id] = i === selectedInPrimal.length - 1
+                ? 100 - (evenSplit * (selectedInPrimal.length - 1))
+                : evenSplit
+            })
+          }
+        }
+
+        return {
+          ...prev,
+          selectedCuts: newSelections,
+          splitAllocations: newSplitAllocations,
+        }
       }
     })
-  }, [])
+  }, [animalSchema.primals])
 
   // Show what would be disabled
   const showWouldDisable = useCallback((cutId: string) => {
@@ -496,6 +933,34 @@ export function PrimalCutSheetBuilder({
       wouldDisable,
     })
   }, [state.animalType])
+
+  // Update cut parameters (thickness, per package, etc.)
+  const handleParameterChange = useCallback((cutId: string, param: string, value: unknown) => {
+    setState(prev => ({
+      ...prev,
+      cutParameters: {
+        ...prev.cutParameters,
+        [cutId]: {
+          ...(prev.cutParameters[cutId] || {}),
+          [param]: value,
+        },
+      },
+    }))
+  }, [])
+
+  // Update split allocation for a primal
+  const handleSplitAllocationChange = useCallback((primalId: string, cutId: string, percentage: number) => {
+    setState(prev => ({
+      ...prev,
+      splitAllocations: {
+        ...prev.splitAllocations,
+        [primalId]: {
+          ...(prev.splitAllocations[primalId] || {}),
+          [cutId]: percentage,
+        },
+      },
+    }))
+  }, [])
 
   // Toggle organ
   const toggleOrgan = useCallback((organId: keyof OrganSelections) => {
@@ -630,16 +1095,28 @@ export function PrimalCutSheetBuilder({
         </div>
 
         {/* Validation Errors */}
-        {validationResult.errors.length > 0 && (
+        {(validationResult.errors.length > 0 || splitAllocationErrors.length > 0) && (
           <div className="mb-6 space-y-2">
             {validationResult.errors.map((error, i) => (
               <div
-                key={i}
+                key={`conflict-${i}`}
                 className="p-4 rounded-lg flex items-start gap-3 bg-red-50 border border-red-300"
               >
                 <AlertTriangle className="w-5 h-5 mt-0.5 text-red-600" />
                 <div>
                   <div className="font-medium text-red-800">Conflict Detected</div>
+                  <div className="text-sm text-red-700">{error.message}</div>
+                </div>
+              </div>
+            ))}
+            {splitAllocationErrors.map((error, i) => (
+              <div
+                key={`split-${i}`}
+                className="p-4 rounded-lg flex items-start gap-3 bg-red-50 border border-red-300"
+              >
+                <AlertTriangle className="w-5 h-5 mt-0.5 text-red-600" />
+                <div>
+                  <div className="font-medium text-red-800">Allocation Required</div>
                   <div className="text-sm text-red-700">{error.message}</div>
                 </div>
               </div>
@@ -671,10 +1148,14 @@ export function PrimalCutSheetBuilder({
             key={primalId}
             primal={primal}
             selectedCuts={state.selectedCuts}
+            cutParameters={state.cutParameters}
+            splitAllocations={state.splitAllocations[primalId] || {}}
             availability={availability}
             warnings={validationResult.warnings}
             onToggleCut={toggleCut}
             onShowWouldDisable={showWouldDisable}
+            onParameterChange={handleParameterChange}
+            onSplitAllocationChange={(cutId, percentage) => handleSplitAllocationChange(primalId, cutId, percentage)}
           />
         ))}
 
