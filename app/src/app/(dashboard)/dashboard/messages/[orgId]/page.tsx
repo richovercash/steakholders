@@ -10,6 +10,13 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { ArrowLeft, Send, Building2, Warehouse } from 'lucide-react'
 import type { Message, Organization } from '@/types/database'
+import {
+  getOrganizationById,
+  getConversationMessages,
+  getUserProfile,
+  sendMessage as sendMessageAction,
+  markMessagesAsRead,
+} from '@/lib/actions/messages'
 
 interface MessageWithSender extends Message {
   sender: { full_name: string } | null
@@ -40,69 +47,38 @@ export default function ConversationPage() {
     scrollToBottom()
   }, [messages])
 
-  // Load conversation data
+  // Load conversation data using server actions
   useEffect(() => {
     async function loadConversation() {
       setLoading(true)
       try {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) {
+        // Get user's profile and org via server action
+        const profile = await getUserProfile()
+
+        if (!profile) {
           router.push('/login')
-          return
-        }
-
-        // Get user's profile and org
-        const { data: profile } = await supabase
-          .from('users')
-          .select('id, organization_id')
-          .eq('auth_id', user.id)
-          .single() as { data: { id: string; organization_id: string | null } | null }
-
-        if (!profile?.organization_id) {
-          setError('No organization found')
           return
         }
 
         setMyOrgId(profile.organization_id)
         setUserId(profile.id)
 
-        // Get partner organization
-        const { data: partner, error: partnerError } = await supabase
-          .from('organizations')
-          .select('*')
-          .eq('id', orgId)
-          .single() as { data: Organization | null; error: Error | null }
+        // Get partner organization via server action
+        const partner = await getOrganizationById(orgId)
 
-        if (partnerError || !partner) {
+        if (!partner) {
           setError('Organization not found')
           return
         }
 
         setPartnerOrg(partner)
 
-        // Fetch messages between the two orgs
-        const { data: msgs, error: msgsError } = await supabase
-          .from('messages')
-          .select(`
-            *,
-            sender:users!sender_id(full_name)
-          `)
-          .or(`and(sender_org_id.eq.${profile.organization_id},recipient_org_id.eq.${orgId}),and(sender_org_id.eq.${orgId},recipient_org_id.eq.${profile.organization_id})`)
-          .order('created_at', { ascending: true }) as { data: MessageWithSender[] | null; error: Error | null }
+        // Fetch messages between the two orgs via server action
+        const msgs = await getConversationMessages(profile.organization_id, orgId)
+        setMessages(msgs)
 
-        if (msgsError) {
-          console.error('Messages error:', msgsError)
-        }
-
-        setMessages(msgs || [])
-
-        // Mark messages as read
-        await supabase
-          .from('messages')
-          .update({ read_at: new Date().toISOString() } as never)
-          .eq('sender_org_id', orgId)
-          .eq('recipient_org_id', profile.organization_id)
-          .is('read_at', null)
+        // Mark messages as read via server action
+        await markMessagesAsRead(orgId, profile.organization_id)
 
       } catch (err) {
         console.error('Load error:', err)
@@ -113,7 +89,7 @@ export default function ConversationPage() {
     }
 
     loadConversation()
-  }, [orgId, router, supabase])
+  }, [orgId, router])
 
   // Set up real-time subscription
   useEffect(() => {
@@ -166,31 +142,15 @@ export default function ConversationPage() {
 
     setSending(true)
     try {
-      const messageData = {
-        sender_id: userId,
-        sender_org_id: myOrgId,
-        recipient_org_id: orgId,
-        content: newMessage.trim(),
-      }
+      // Use server action to send message
+      const insertedMsg = await sendMessageAction(userId, myOrgId, orgId, newMessage)
 
-      const { data: insertedMsg, error: insertError } = await supabase
-        .from('messages')
-        .insert(messageData as never)
-        .select(`
-          *,
-          sender:users!sender_id(full_name)
-        `)
-        .single() as { data: MessageWithSender | null; error: Error | null }
-
-      if (insertError) {
-        console.error('Send error:', insertError)
+      if (!insertedMsg) {
         setError('Failed to send message')
         return
       }
 
-      if (insertedMsg) {
-        setMessages(prev => [...prev, insertedMsg])
-      }
+      setMessages(prev => [...prev, insertedMsg])
       setNewMessage('')
     } catch (err) {
       console.error('Send error:', err)
