@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect, useRef, use, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
@@ -14,12 +15,9 @@ interface MessageWithSender extends Message {
   sender: { full_name: string } | null
 }
 
-interface PageProps {
-  params: Promise<{ orgId: string }>
-}
-
-export default function ConversationPage({ params }: PageProps) {
-  const { orgId } = use(params)
+export default function ConversationPage() {
+  const params = useParams()
+  const orgId = params.orgId as string
   const [messages, setMessages] = useState<MessageWithSender[]>([])
   const [partnerOrg, setPartnerOrg] = useState<Organization | null>(null)
   const [myOrgId, setMyOrgId] = useState<string | null>(null)

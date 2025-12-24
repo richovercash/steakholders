@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, use, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useMemo } from 'react'
+import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -14,12 +14,9 @@ import { ArrowLeft, Trash2, Edit3, Save, X, Beef, PiggyBank, Rabbit } from 'luci
 import { GoatIcon } from '@/components/icons/AnimalIcons'
 import type { Livestock, AnimalType, LivestockStatus } from '@/types/database'
 
-interface PageProps {
-  params: Promise<{ id: string }>
-}
-
-export default function LivestockDetailPage({ params }: PageProps) {
-  const { id } = use(params)
+export default function LivestockDetailPage() {
+  const params = useParams()
+  const id = params.id as string
   const [livestock, setLivestock] = useState<Livestock | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
