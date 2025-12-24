@@ -18,6 +18,7 @@ An ADR is a document that captures an important architectural decision made alon
 | [ADR-006](./006-messaging-system.md) | Organization-to-Organization Messaging | Accepted | 2024-12 |
 | [ADR-007](./007-rls-helper-functions.md) | RLS Helper Functions with SECURITY DEFINER | Accepted | 2024-12 |
 | [ADR-008](./008-waitlist-system.md) | Waitlist System Design | Accepted | 2024-12 |
+| [ADR-009](./009-primal-based-cutsheet.md) | Primal-Based Cut Sheet Schema | Accepted | 2024-12 |
 
 ## ADR Status Definitions
 
