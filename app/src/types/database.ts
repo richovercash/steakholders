@@ -619,6 +619,53 @@ export interface Database {
           notes?: string | null
         }
       }
+      processor_cut_config: {
+        Row: {
+          id: string
+          created_at: string
+          updated_at: string
+          processor_id: string
+          enabled_animals: AnimalType[]
+          disabled_cuts: string[]
+          disabled_sausage_flavors: string[]
+          custom_cuts: Json
+          default_templates: Json
+          processing_fees: Json
+          min_hanging_weight: number | null
+          max_hanging_weight: number | null
+          producer_notes: string | null
+        }
+        Insert: {
+          id?: string
+          created_at?: string
+          updated_at?: string
+          processor_id: string
+          enabled_animals?: AnimalType[]
+          disabled_cuts?: string[]
+          disabled_sausage_flavors?: string[]
+          custom_cuts?: Json
+          default_templates?: Json
+          processing_fees?: Json
+          min_hanging_weight?: number | null
+          max_hanging_weight?: number | null
+          producer_notes?: string | null
+        }
+        Update: {
+          id?: string
+          created_at?: string
+          updated_at?: string
+          processor_id?: string
+          enabled_animals?: AnimalType[]
+          disabled_cuts?: string[]
+          disabled_sausage_flavors?: string[]
+          custom_cuts?: Json
+          default_templates?: Json
+          processing_fees?: Json
+          min_hanging_weight?: number | null
+          max_hanging_weight?: number | null
+          producer_notes?: string | null
+        }
+      }
     }
     Views: {
       [_ in never]: never
@@ -656,6 +703,7 @@ export type CutSheetSausage = Tables<'cut_sheet_sausages'>
 export type Message = Tables<'messages'>
 export type Notification = Tables<'notifications'>
 export type WaitlistEntry = Tables<'waitlist_entries'>
+export type ProcessorCutConfig = Tables<'processor_cut_config'>
 
 // Cut Sheet Helper Types
 export interface CutDefinition {
