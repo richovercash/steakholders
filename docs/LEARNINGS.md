@@ -29,6 +29,68 @@ WHERE organization_id = (
 
 ---
 
+### RLS Policy Recursion with SECURITY DEFINER Fix
+
+**Problem**: RLS policy on `organizations` table needed to check user's organization type, but querying `organizations` inside the policy caused infinite recursion.
+
+**Root Cause**: When Supabase evaluates an RLS policy, any query to the protected table triggers the policy again, causing a loop.
+
+**Solution**: Use `SECURITY DEFINER` helper functions that bypass RLS:
+
+```sql
+-- This function runs as superuser, bypassing RLS
+CREATE OR REPLACE FUNCTION get_user_org_type()
+RETURNS TEXT AS $$
+  SELECT o.type::TEXT
+  FROM users u
+  JOIN organizations o ON o.id = u.organization_id
+  WHERE u.auth_id = auth.uid()
+  LIMIT 1
+$$ LANGUAGE SQL SECURITY DEFINER STABLE;
+
+-- Now safe to use in RLS policy
+CREATE POLICY "Processors can view all organizations"
+ON organizations FOR SELECT
+USING (get_user_org_type() = 'processor');
+```
+
+**Key Points**:
+- `SECURITY DEFINER` makes the function run with owner privileges (superuser)
+- `STABLE` allows PostgreSQL to cache results within a transaction
+- Always use `auth.uid()` to ensure user can only access their own context
+
+**Lesson**: When RLS policies need to check user attributes that involve querying the same table, extract that logic into a SECURITY DEFINER function.
+
+---
+
+### Server Actions for RLS Bypass in Next.js
+
+**Problem**: Client-side Supabase operations were blocked by RLS policies, even when the user should have access.
+
+**Root Cause**: The client-side Supabase client may not properly carry auth context for all operations, especially with Next.js App Router.
+
+**Solution**: Use Server Actions (`'use server'`) which create a fresh authenticated Supabase client:
+
+```typescript
+// lib/actions/messages.ts
+'use server'
+
+export async function getNewMessages(myOrgId: string, partnerOrgId: string, afterTimestamp: string) {
+  const supabase = await createClient() // Server-side client with proper auth
+  const { data } = await supabase
+    .from('messages')
+    .select('*')
+    .gt('created_at', afterTimestamp)
+  return data
+}
+```
+
+**Pattern**: Server Component fetches initial data, Client Component calls Server Actions for updates.
+
+**Lesson**: When RLS works in server components but fails in client components, move the data fetching to server actions.
+
+---
+
 ### PostgreSQL Enum Type Casting
 
 **Problem**: SQL insert failed with "column 'animal_type' is of type animal_type but expression is of type text"
@@ -87,7 +149,87 @@ VALUES ('auth-user-uuid', 'test@example.com', 'org-uuid', 'owner', ...);
 
 ---
 
+### Polling vs Supabase Realtime
+
+**Problem**: Supabase Realtime subscriptions weren't receiving updates in the Next.js App Router.
+
+**Root Cause**: Client-side Supabase Realtime requires proper authentication setup which can be tricky with App Router's server-first approach. The subscription would connect but not receive row-level-security-filtered data.
+
+**Solution**: Use polling with Server Actions instead:
+
+```typescript
+// Client component
+const POLL_INTERVAL = 5000
+
+const lastMessageTimeRef = useRef<string>(lastTimestamp)
+
+const pollForMessages = useCallback(async () => {
+  const newMsgs = await getNewMessages(myOrgId, partnerOrgId, lastMessageTimeRef.current)
+  if (newMsgs.length > 0) {
+    setMessages(prev => {
+      const existingIds = new Set(prev.map(m => m.id))
+      const uniqueNewMsgs = newMsgs.filter(m => !existingIds.has(m.id))
+      if (uniqueNewMsgs.length > 0) {
+        lastMessageTimeRef.current = uniqueNewMsgs[uniqueNewMsgs.length - 1].created_at
+        return [...prev, ...uniqueNewMsgs]
+      }
+      return prev
+    })
+  }
+}, [myOrgId, partnerOrgId])
+
+useEffect(() => {
+  const intervalId = setInterval(pollForMessages, POLL_INTERVAL)
+  return () => clearInterval(intervalId)
+}, [pollForMessages])
+```
+
+**Key Points**:
+- Use `useRef` for timestamps to avoid stale closures
+- Deduplicate by ID to handle race conditions
+- Server Actions properly authenticate with RLS
+- 5 seconds is a good balance between responsiveness and server load
+
+**Lesson**: When Supabase Realtime doesn't work with your auth setup, polling via Server Actions is a reliable alternative.
+
+---
+
 ## Next.js & React
+
+### Server + Client Component Pattern for Data + Interactivity
+
+**Problem**: Page needs server-side data fetching (for RLS/auth) but also client-side interactivity (real-time updates, form handling).
+
+**Solution**: Server Component wrapper that fetches data and passes to Client Component:
+
+```typescript
+// page.tsx - Server Component
+export default async function ConversationPage({ params }: { params: { orgId: string } }) {
+  const { orgId } = await params
+  const supabase = await createClient()
+
+  // Server-side data fetching (proper RLS context)
+  const { data: messages } = await supabase
+    .from('messages')
+    .select('*')
+    .order('created_at', { ascending: true })
+
+  // Pass data to client component
+  return <ConversationClient initialMessages={messages || []} orgId={orgId} />
+}
+
+// ConversationClient.tsx - Client Component
+'use client'
+
+export default function ConversationClient({ initialMessages, orgId }: Props) {
+  const [messages, setMessages] = useState(initialMessages)
+  // Now can use hooks, polling, event handlers, etc.
+}
+```
+
+**Lesson**: When you need both server-side auth/data AND client interactivity, split into Server wrapper + Client child.
+
+---
 
 ### Server vs Client Components
 

@@ -16,6 +16,7 @@ An ADR is a document that captures an important architectural decision made alon
 | [ADR-004](./004-cut-sheet-architecture.md) | Cut Sheet Architecture | Accepted | 2024-12 |
 | [ADR-005](./005-authentication-flow.md) | Authentication & Onboarding Flow | Accepted | 2024-12 |
 | [ADR-006](./006-messaging-system.md) | Organization-to-Organization Messaging | Accepted | 2024-12 |
+| [ADR-007](./007-rls-helper-functions.md) | RLS Helper Functions with SECURITY DEFINER | Accepted | 2024-12 |
 
 ## ADR Status Definitions
 

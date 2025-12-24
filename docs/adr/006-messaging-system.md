@@ -184,22 +184,84 @@ return (
 )
 ```
 
-### Future: Real-Time
+### Real-Time Updates via Polling
+
+**Decision**: Use polling instead of Supabase Realtime subscriptions.
+
+**Rationale**: Supabase Realtime subscriptions with RLS had reliability issues - the client-side Supabase client couldn't properly authenticate for realtime channels in the Next.js App Router context. Polling via server actions is more reliable and leverages the same RLS-bypassing pattern used elsewhere.
+
+**Implementation**:
 
 ```typescript
-// Subscribe to new messages
-const channel = supabase
-  .channel('messages')
-  .on('postgres_changes', {
-    event: 'INSERT',
-    schema: 'public',
-    table: 'messages',
-    filter: `receiver_organization_id=eq.${orgId}`
-  }, payload => {
-    setMessages(prev => [...prev, payload.new])
-  })
-  .subscribe()
+// ConversationClient.tsx - Client component with polling
+const POLL_INTERVAL = 5000 // 5 seconds
+
+const lastMessageTimeRef = useRef<string>(
+  initialMessages.length > 0
+    ? initialMessages[initialMessages.length - 1].created_at
+    : new Date().toISOString()
+)
+
+const pollForMessages = useCallback(async () => {
+  const newMsgs = await getNewMessages(myOrgId, partnerOrgId, lastMessageTimeRef.current)
+  if (newMsgs.length > 0) {
+    setMessages(prev => {
+      // Deduplicate by message ID
+      const existingIds = new Set(prev.map(m => m.id))
+      const uniqueNewMsgs = newMsgs.filter(m => !existingIds.has(m.id))
+      if (uniqueNewMsgs.length > 0) {
+        lastMessageTimeRef.current = uniqueNewMsgs[uniqueNewMsgs.length - 1].created_at
+        return [...prev, ...uniqueNewMsgs]
+      }
+      return prev
+    })
+  }
+}, [myOrgId, partnerOrgId])
+
+useEffect(() => {
+  const intervalId = setInterval(pollForMessages, POLL_INTERVAL)
+  return () => clearInterval(intervalId)
+}, [pollForMessages])
 ```
+
+```typescript
+// Server action for fetching new messages
+export async function getNewMessages(
+  myOrgId: string,
+  partnerOrgId: string,
+  afterTimestamp: string
+): Promise<MessageWithSender[]> {
+  const supabase = await createClient()
+
+  const { data } = await supabase
+    .from('messages')
+    .select(`*, sender:users!sender_id(full_name)`)
+    .or(`and(sender_org_id.eq.${myOrgId},recipient_org_id.eq.${partnerOrgId}),and(sender_org_id.eq.${partnerOrgId},recipient_org_id.eq.${myOrgId})`)
+    .gt('created_at', afterTimestamp)
+    .order('created_at', { ascending: true })
+
+  // Auto-mark incoming messages as read
+  if (data && data.length > 0) {
+    const incomingIds = data
+      .filter(msg => msg.sender_org_id === partnerOrgId && !msg.read_at)
+      .map(msg => msg.id)
+    if (incomingIds.length > 0) {
+      await supabase
+        .from('messages')
+        .update({ read_at: new Date().toISOString() })
+        .in('id', incomingIds)
+    }
+  }
+
+  return data || []
+}
+```
+
+**Key Features**:
+- 5-second polling interval balances responsiveness vs server load
+- Deduplication prevents duplicate messages on concurrent updates
+- Uses `created_at` timestamp to only fetch new messages
+- Auto-marks incoming messages as read during polling
 
 ## Alternatives Considered
 
