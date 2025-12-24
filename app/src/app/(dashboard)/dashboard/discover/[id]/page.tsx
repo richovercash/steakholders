@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { MapPin, Phone, Mail, Calendar, Clock, ArrowLeft, MessageSquare } from 'lucide-react'
 import Link from 'next/link'
 import type { Organization } from '@/types/database'
+import { SlotCard } from './SlotCard'
 
 interface CalendarSlot {
   id: string
@@ -168,43 +169,14 @@ export default async function ProcessorDetailPage({
         <CardContent>
           {availableDates.length > 0 ? (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {availableDates.map((date) => {
-                const dateSlots = slotsByDate[date]
-                const formattedDate = new Date(date + 'T00:00:00').toLocaleDateString('en-US', {
-                  weekday: 'short',
-                  month: 'short',
-                  day: 'numeric',
-                })
-
-                return (
-                  <div key={date} className="border rounded-lg p-4">
-                    <h4 className="font-medium mb-2">{formattedDate}</h4>
-                    <div className="space-y-2">
-                      {dateSlots.map((slot) => {
-                        const available = slot.capacity - slot.booked
-                        return (
-                          <div key={slot.id} className="flex justify-between items-center text-sm">
-                            <span className="capitalize">{slot.animal_type}</span>
-                            <div className="flex items-center gap-2">
-                              <span className={available > 0 ? 'text-green-600' : 'text-red-500'}>
-                                {available > 0 ? `${available} spots` : 'Full'}
-                              </span>
-                              {slot.kill_fee && (
-                                <span className="text-gray-500">${slot.kill_fee}</span>
-                              )}
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                    <Link href={`/dashboard/orders/new?processor=${processor.id}&date=${date}`}>
-                      <Button className="w-full mt-3 bg-green-700 hover:bg-green-800" size="sm">
-                        Book This Date
-                      </Button>
-                    </Link>
-                  </div>
-                )
-              })}
+              {availableDates.map((date) => (
+                <SlotCard
+                  key={date}
+                  processorId={processor.id}
+                  date={date}
+                  slots={slotsByDate[date]}
+                />
+              ))}
             </div>
           ) : (
             <div className="text-center py-8 text-gray-500">

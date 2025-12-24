@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { ArrowLeft, FileText, Calendar, Truck, Package, CheckCircle, Edit2, Save, X } from 'lucide-react'
 import { notifyOrderStatusChange, notifyProcessingStageChange } from '@/lib/notifications/actions'
+import { notifyNextInWaitlist } from '@/lib/actions/waitlist'
 import type { AnimalType, OrderStatus, ProcessingStage, OrganizationType } from '@/types/database'
 
 interface OrderWithRelations {
@@ -274,6 +275,17 @@ export default function OrderDetailPage({ params }: PageProps) {
         processorOrgId: order.processor.id,
         animalType: order.livestock?.animal_type,
       })
+
+      // If order was cancelled, notify next person in waitlist
+      if (newStatus === 'cancelled' && order.scheduled_drop_off && order.livestock?.animal_type) {
+        const scheduledDate = order.scheduled_drop_off.split('T')[0]
+        await notifyNextInWaitlist(
+          order.processor.id,
+          scheduledDate,
+          order.livestock.animal_type
+        )
+      }
+
       await loadOrder()
     }
 
@@ -442,6 +454,21 @@ export default function OrderDetailPage({ params }: PageProps) {
                   disabled={saving}
                 >
                   Mark Complete (Picked Up)
+                </Button>
+              )}
+              {order.status !== 'complete' && order.status !== 'cancelled' && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-red-600 border-red-300 hover:bg-red-50"
+                  onClick={() => {
+                    if (confirm('Are you sure you want to cancel this order? This will notify anyone on the waitlist.')) {
+                      handleQuickStatusChange('cancelled')
+                    }
+                  }}
+                  disabled={saving}
+                >
+                  Cancel Order
                 </Button>
               )}
             </div>
