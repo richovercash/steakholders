@@ -14,6 +14,7 @@ import {
   LogOut,
   Menu,
   Search,
+  Clock,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -49,12 +50,14 @@ export function DashboardNav({ user, organization, initialNotifications = [], in
         { name: 'Livestock', href: '/dashboard/livestock', icon: Truck },
         { name: 'Find Processors', href: '/dashboard/discover', icon: Search },
         { name: 'Orders', href: '/dashboard/orders', icon: ClipboardList },
+        { name: 'Waitlist', href: '/dashboard/waitlist', icon: Clock },
         { name: 'Messages', href: '/dashboard/messages', icon: MessageSquare },
       ]
     : [
         { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
         { name: 'Calendar', href: '/dashboard/calendar', icon: Calendar },
         { name: 'Orders', href: '/dashboard/orders', icon: ClipboardList },
+        { name: 'Waitlist', href: '/dashboard/waitlist', icon: Clock },
         { name: 'Messages', href: '/dashboard/messages', icon: MessageSquare },
       ]
 
