@@ -523,3 +523,176 @@ const publicUrl = process.env.NEXT_PUBLIC_SUPABASE_URL // works
 - [ ] No secrets in client-side code
 - [ ] HTTPS enforced in production
 - [ ] Auth tokens in HTTP-only cookies
+
+---
+
+## Supabase Type Inference Issues
+
+### TypeScript `never` Type from Supabase Queries
+
+**Problem**: Supabase queries return data typed as `never`, causing "Property does not exist on type 'never'" errors.
+
+**Root Cause**: TypeScript can't infer the column types from the query string, especially in server actions where the database types aren't properly connected.
+
+**Solution**: Use explicit type assertions after null checks:
+
+```typescript
+// Wrong - causes 'never' type error
+const { data: profile } = await supabase
+  .from('users')
+  .select('organization_id')
+  .eq('auth_id', user.id)
+  .single()
+
+return profile?.organization_id // Error: Property doesn't exist on 'never'
+
+// Right - explicit type assertion
+const { data: profile, error } = await supabase
+  .from('users')
+  .select('organization_id')
+  .eq('auth_id', user.id)
+  .single()
+
+if (error || !profile) return null
+return (profile as { organization_id: string | null }).organization_id // Works
+```
+
+**Pattern**: Define interface for expected shape, then cast after validation:
+
+```typescript
+interface ProfileWithOrg {
+  organization_id: string | null
+  organization: { type: string } | null
+}
+
+const { data: profile } = await supabase
+  .from('users')
+  .select('organization_id, organization:organizations(type)')
+  .eq('auth_id', user.id)
+  .single() as { data: ProfileWithOrg | null }
+```
+
+**Lesson**: When Supabase types aren't working, explicit type assertions are the pragmatic solution.
+
+---
+
+## Component Extraction Pattern
+
+### When to Extract Client Components
+
+**Problem**: Server components with inline interactive elements get messy and break when you add state.
+
+**Solution**: Extract interactive parts into separate client components:
+
+```typescript
+// page.tsx - Server Component (clean, data-focused)
+export default async function ProcessorPage({ params }) {
+  const slots = await fetchSlots(params.id)
+  const slotsByDate = groupByDate(slots)
+
+  return (
+    <div>
+      {Object.keys(slotsByDate).map(date => (
+        <SlotCard
+          key={date}
+          processorId={params.id}
+          date={date}
+          slots={slotsByDate[date]}
+        />
+      ))}
+    </div>
+  )
+}
+
+// SlotCard.tsx - Client Component (interactive)
+'use client'
+
+export function SlotCard({ processorId, date, slots }) {
+  const [loading, setLoading] = useState(false)
+
+  const handleJoinWaitlist = async () => {
+    setLoading(true)
+    await createWaitlistEntry({ processorId, date })
+    setLoading(false)
+  }
+
+  return (
+    <div>
+      {/* Can use state, effects, handlers */}
+      <Button onClick={handleJoinWaitlist} disabled={loading}>
+        Join Waitlist
+      </Button>
+    </div>
+  )
+}
+```
+
+**Benefits**:
+- Server component stays simple and fast
+- Client component encapsulates all interactivity
+- Clear separation of data vs UI logic
+- Easy to test components in isolation
+
+**Lesson**: When a section needs `useState` or event handlers, extract it to a client component rather than making the whole page a client component.
+
+---
+
+## Event-Driven Side Effects
+
+### Triggering Notifications from UI Actions
+
+**Problem**: When an order is cancelled, we need to notify the next person in the waitlist.
+
+**Solution**: Call the notification function directly in the status change handler:
+
+```typescript
+const handleQuickStatusChange = async (newStatus: OrderStatus) => {
+  // Update the order
+  await supabase.from('processing_orders').update({ status: newStatus })
+
+  // Send standard notification
+  await notifyOrderStatusChange({ orderId, newStatus, ... })
+
+  // Trigger waitlist notification if cancelled
+  if (newStatus === 'cancelled' && order.scheduled_drop_off) {
+    await notifyNextInWaitlist(
+      order.processor.id,
+      order.scheduled_drop_off.split('T')[0],
+      order.livestock.animal_type
+    )
+  }
+}
+```
+
+**Alternative approaches considered**:
+1. **Database trigger**: Run notification logic in PostgreSQL. Rejected because: complex, hard to debug, mixes concerns.
+2. **Background job**: Queue notification for async processing. Rejected because: adds infrastructure, overkill for low volume.
+3. **Webhook**: Call external service on status change. Rejected because: external dependency, latency.
+
+**Lesson**: For MVP, simple inline calls are fine. Extract to background jobs when scale demands it.
+
+---
+
+## Confirmation Dialogs for Destructive Actions
+
+### Using Native `confirm()` vs Custom Dialog
+
+**Problem**: Need confirmation before destructive actions like cancelling orders.
+
+**Solution for MVP**: Use native `confirm()`:
+
+```typescript
+onClick={() => {
+  if (confirm('Are you sure you want to cancel this order?')) {
+    handleQuickStatusChange('cancelled')
+  }
+}}
+```
+
+**When to upgrade to custom AlertDialog**:
+- Need branded/styled confirmation
+- Need to show additional information in dialog
+- Need multiple options (not just OK/Cancel)
+- Need to prevent dialog from being dismissed incorrectly
+
+**Lesson**: Native `confirm()` is fine for MVP. Upgrade to AlertDialog component when UX requirements demand it.
