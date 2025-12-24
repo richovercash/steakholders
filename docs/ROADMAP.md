@@ -47,12 +47,12 @@ Advanced processor tools, multi-region expansion, consumer subscriptions.
 - [x] Messaging between parties
 - [x] Notifications
 
-### 1.2 Waitlist System 🔄 In Progress
-- [ ] Join waitlist when slots full
-- [ ] View/manage waitlist entries
-- [ ] Notification when slot opens
-- [ ] 24-hour claim window
-- [ ] FIFO queue management
+### 1.2 Waitlist System ✅ Complete
+- [x] Join waitlist when slots full
+- [x] View/manage waitlist entries
+- [x] Notification when slot opens
+- [x] 24-hour claim window
+- [x] FIFO queue management
 
 **Future Enhancements (post-MVP):**
 - Waitlist spot trading between producers
@@ -319,13 +319,12 @@ Advanced processor tools, multi-region expansion, consumer subscriptions.
 
 ## Current Sprint Focus
 
-**Completing Phase 1.2: Waitlist System**
+**Starting Phase 1.3: Order Enhancements**
 
-1. Server actions (CRUD for waitlist entries)
-2. Producer waitlist page
-3. "Join Waitlist" integration with booking
-4. Processor waitlist visibility
-5. Notification on slot availability
+1. Batch animals per order (multiple livestock, same cut sheet)
+2. Segregate orders by animal type
+3. Apply saved cut sheet template to new orders
+4. Animal-type-aware cut sheet (only show relevant options)
 
 ---
 
