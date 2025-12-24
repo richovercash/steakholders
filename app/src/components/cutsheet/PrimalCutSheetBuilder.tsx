@@ -46,6 +46,15 @@ import {
   getAllCuts,
 } from '@/lib/cut-sheet-schema'
 import {
+  applyProcessorConfig,
+  getProducerNotes,
+  getWeightRequirements,
+  type FilteredAnimalSchema,
+  type FilteredPrimal,
+  type FilteredCutChoice,
+} from '@/lib/cut-sheet-filter'
+import type { ProcessorCutConfig } from '@/types/database'
+import {
   validateCutSheet,
   getCutAvailability,
   getWouldDisable,
@@ -89,6 +98,7 @@ interface PrimalCutSheetBuilderProps {
   initialAnimalType?: AnimalType
   initialState?: Partial<PrimalCutSheetState>
   templates?: CutSheetTemplate[]
+  processorConfig?: ProcessorCutConfig | null
   onSave: (state: PrimalCutSheetState) => Promise<void>
   onSaveAsTemplate?: (state: PrimalCutSheetState, name: string) => Promise<void>
   onLoadTemplate?: (templateId: string) => Promise<PrimalCutSheetState | null>
@@ -233,7 +243,7 @@ function PrimalSection({
   onToggleCut,
   onShowWouldDisable,
 }: {
-  primal: Primal
+  primal: FilteredPrimal | Primal
   selectedCuts: CutSelection[]
   availability: ReturnType<typeof getCutAvailability>
   warnings: ValidationWarning[]
@@ -243,10 +253,28 @@ function PrimalSection({
   const [isOpen, setIsOpen] = useState(true)
   const selectedIds = new Set(selectedCuts.map(s => s.cutId))
 
-  const hasSelectedCuts = primal.choices.some(c => selectedIds.has(c.id)) ||
-    (primal.subSections && Object.values(primal.subSections).some(sub =>
-      sub.choices.some(c => selectedIds.has(c.id))
-    ))
+  // Filter out disabled cuts from processor config
+  const enabledChoices = primal.choices.filter(c => {
+    const filteredCut = c as FilteredCutChoice
+    return !filteredCut.disabled
+  })
+
+  const hasSelectedCuts = enabledChoices.some(c => selectedIds.has(c.id)) ||
+    (primal.subSections && Object.values(primal.subSections).some(sub => {
+      const enabledSubChoices = sub.choices.filter(c => {
+        const filteredCut = c as FilteredCutChoice
+        return !filteredCut.disabled
+      })
+      return enabledSubChoices.some(c => selectedIds.has(c.id))
+    }))
+
+  // Don't render section if no enabled choices
+  if (enabledChoices.length === 0 && (!primal.subSections ||
+    Object.values(primal.subSections).every(sub =>
+      sub.choices.every(c => (c as FilteredCutChoice).disabled)
+    ))) {
+    return null
+  }
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -261,9 +289,11 @@ function PrimalSection({
                     {primal.displayName}
                     {hasSelectedCuts && (
                       <span className="text-sm font-normal text-green-600">
-                        ({primal.choices.filter(c => selectedIds.has(c.id)).length +
-                          (primal.subSections ? Object.values(primal.subSections).reduce((acc, sub) =>
-                            acc + sub.choices.filter(c => selectedIds.has(c.id)).length, 0) : 0)} selected)
+                        ({enabledChoices.filter(c => selectedIds.has(c.id)).length +
+                          (primal.subSections ? Object.values(primal.subSections).reduce((acc, sub) => {
+                            const enabledSubChoices = sub.choices.filter(c => !(c as FilteredCutChoice).disabled)
+                            return acc + enabledSubChoices.filter(c => selectedIds.has(c.id)).length
+                          }, 0) : 0)} selected)
                       </span>
                     )}
                   </CardTitle>
@@ -284,10 +314,10 @@ function PrimalSection({
 
         <CollapsibleContent>
           <CardContent>
-            {/* Main choices */}
-            {primal.choices.length > 0 && (
+            {/* Main choices - only show enabled cuts */}
+            {enabledChoices.length > 0 && (
               <div className={`grid gap-3 ${primal.exclusiveChoice ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`}>
-                {primal.choices.map(cut => {
+                {enabledChoices.map(cut => {
                   const avail = availability.find(a => a.cutId === cut.id)
                   const warning = warnings.find(w => w.cutId === cut.id)
 
@@ -308,37 +338,44 @@ function PrimalSection({
               </div>
             )}
 
-            {/* Sub-sections */}
-            {primal.subSections && Object.entries(primal.subSections).map(([subId, subSection]) => (
-              <div key={subId} className="mt-6">
-                <h4 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
-                  {subSection.displayName}
-                  {subSection.exclusiveChoice && (
-                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">Choose one</span>
-                  )}
-                </h4>
-                <div className={`grid gap-3 ${subSection.exclusiveChoice ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`}>
-                  {subSection.choices.map(cut => {
-                    const avail = availability.find(a => a.cutId === cut.id)
-                    const warning = warnings.find(w => w.cutId === cut.id)
+            {/* Sub-sections - only show enabled cuts */}
+            {primal.subSections && Object.entries(primal.subSections).map(([subId, subSection]) => {
+              const enabledSubChoices = subSection.choices.filter(c => !(c as FilteredCutChoice).disabled)
 
-                    return (
-                      <CutChoiceItem
-                        key={cut.id}
-                        cut={cut}
-                        isSelected={selectedIds.has(cut.id)}
-                        isDisabled={!avail?.available}
-                        disabledReason={avail?.reason}
-                        hasWarning={!!warning}
-                        warningMessage={warning?.message}
-                        onToggle={onToggleCut}
-                        onShowWouldDisable={onShowWouldDisable}
-                      />
-                    )
-                  })}
+              // Skip subsection if no enabled choices
+              if (enabledSubChoices.length === 0) return null
+
+              return (
+                <div key={subId} className="mt-6">
+                  <h4 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
+                    {subSection.displayName}
+                    {subSection.exclusiveChoice && (
+                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">Choose one</span>
+                    )}
+                  </h4>
+                  <div className={`grid gap-3 ${subSection.exclusiveChoice ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`}>
+                    {enabledSubChoices.map(cut => {
+                      const avail = availability.find(a => a.cutId === cut.id)
+                      const warning = warnings.find(w => w.cutId === cut.id)
+
+                      return (
+                        <CutChoiceItem
+                          key={cut.id}
+                          cut={cut}
+                          isSelected={selectedIds.has(cut.id)}
+                          isDisabled={!avail?.available}
+                          disabledReason={avail?.reason}
+                          hasWarning={!!warning}
+                          warningMessage={warning?.message}
+                          onToggle={onToggleCut}
+                          onShowWouldDisable={onShowWouldDisable}
+                        />
+                      )
+                    })}
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </CardContent>
         </CollapsibleContent>
       </Card>
@@ -350,6 +387,7 @@ export function PrimalCutSheetBuilder({
   initialAnimalType,
   initialState,
   templates = [],
+  processorConfig,
   onSave,
   onSaveAsTemplate,
   onLoadTemplate,
@@ -370,11 +408,30 @@ export function PrimalCutSheetBuilder({
     wouldDisable: { cutId: string; cutName: string; reason: string }[]
   } | null>(null)
 
-  // Get schema for current animal
+  // Get schema for current animal (filtered by processor config)
   const animalSchema = useMemo(
-    () => CUT_SHEET_SCHEMA.animals[state.animalType],
-    [state.animalType]
+    () => applyProcessorConfig(state.animalType, processorConfig ?? null) || CUT_SHEET_SCHEMA.animals[state.animalType],
+    [state.animalType, processorConfig]
+  ) as FilteredAnimalSchema
+
+  // Get processor notes and weight requirements
+  const processorNotes = useMemo(
+    () => getProducerNotes(processorConfig ?? null),
+    [processorConfig]
   )
+
+  const weightRequirements = useMemo(
+    () => getWeightRequirements(processorConfig ?? null),
+    [processorConfig]
+  )
+
+  // Get enabled animal types based on processor config
+  const enabledAnimalTypes = useMemo(() => {
+    if (!processorConfig?.enabled_animals) {
+      return ['beef', 'pork', 'lamb', 'goat'] as AnimalType[]
+    }
+    return processorConfig.enabled_animals
+  }, [processorConfig])
 
   // Validation
   const validationResult = useMemo(
@@ -518,9 +575,45 @@ export function PrimalCutSheetBuilder({
     <div className="grid lg:grid-cols-[1fr_320px] gap-6">
       {/* Main Content */}
       <div>
+        {/* Processor Notes */}
+        {processorNotes && (
+          <div className="mb-6 p-4 rounded-lg bg-blue-50 border border-blue-200">
+            <div className="flex items-start gap-3">
+              <Info className="w-5 h-5 mt-0.5 text-blue-600 shrink-0" />
+              <div>
+                <div className="font-medium text-blue-800">From Your Processor</div>
+                <div className="text-sm text-blue-700 mt-1 whitespace-pre-wrap">{processorNotes}</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Weight Requirements */}
+        {(weightRequirements.min || weightRequirements.max) && (
+          <div className="mb-6 p-4 rounded-lg bg-amber-50 border border-amber-200">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 mt-0.5 text-amber-600 shrink-0" />
+              <div>
+                <div className="font-medium text-amber-800">Weight Requirements</div>
+                <div className="text-sm text-amber-700 mt-1">
+                  {weightRequirements.min && weightRequirements.max && (
+                    <>Hanging weight must be between {weightRequirements.min} and {weightRequirements.max} lbs.</>
+                  )}
+                  {weightRequirements.min && !weightRequirements.max && (
+                    <>Minimum hanging weight: {weightRequirements.min} lbs.</>
+                  )}
+                  {!weightRequirements.min && weightRequirements.max && (
+                    <>Maximum hanging weight: {weightRequirements.max} lbs.</>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Animal Type Tabs */}
         <div className="mb-6 flex gap-2 flex-wrap">
-          {(['beef', 'pork', 'lamb', 'goat'] as AnimalType[]).map(type => (
+          {enabledAnimalTypes.map(type => (
             <button
               key={type}
               onClick={() => changeAnimalType(type)}

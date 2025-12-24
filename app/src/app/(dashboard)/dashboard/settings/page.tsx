@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast'
 import { Check, Beef, PiggyBank, Rabbit, Flame, Drumstick, Bell, Mail, MessageSquare, Package } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import { GoatIcon } from '@/components/icons/AnimalIcons'
+import { ProcessorCutSheetConfig } from '@/components/settings/ProcessorCutSheetConfig'
 import type { User, Organization } from '@/types/database'
 
 type LicenseType = 'usda' | 'state' | 'custom_exempt'
@@ -591,6 +592,9 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Cut Sheet Configuration - Processors Only */}
+      {isProcessor && <ProcessorCutSheetConfig />}
 
       {/* Danger Zone */}
       <Card className="border-red-200">

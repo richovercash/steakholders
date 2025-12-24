@@ -9,8 +9,8 @@ CREATE POLICY "Processors can view own cut config"
     ON processor_cut_config FOR SELECT
     USING (
         processor_id IN (
-            SELECT org_id FROM users
-            WHERE auth_user_id = auth.uid()
+            SELECT organization_id FROM users
+            WHERE auth_id = auth.uid()
         )
     );
 
@@ -18,8 +18,8 @@ CREATE POLICY "Processors can insert own cut config"
     ON processor_cut_config FOR INSERT
     WITH CHECK (
         processor_id IN (
-            SELECT org_id FROM users
-            WHERE auth_user_id = auth.uid()
+            SELECT organization_id FROM users
+            WHERE auth_id = auth.uid()
         )
         AND EXISTS (
             SELECT 1 FROM organizations
@@ -32,8 +32,8 @@ CREATE POLICY "Processors can update own cut config"
     ON processor_cut_config FOR UPDATE
     USING (
         processor_id IN (
-            SELECT org_id FROM users
-            WHERE auth_user_id = auth.uid()
+            SELECT organization_id FROM users
+            WHERE auth_id = auth.uid()
         )
     );
 
@@ -41,8 +41,8 @@ CREATE POLICY "Processors can delete own cut config"
     ON processor_cut_config FOR DELETE
     USING (
         processor_id IN (
-            SELECT org_id FROM users
-            WHERE auth_user_id = auth.uid()
+            SELECT organization_id FROM users
+            WHERE auth_id = auth.uid()
         )
     );
 
@@ -54,8 +54,8 @@ CREATE POLICY "Producers can view processor cut configs"
         -- User is a producer
         EXISTS (
             SELECT 1 FROM users u
-            JOIN organizations o ON u.org_id = o.id
-            WHERE u.auth_user_id = auth.uid()
+            JOIN organizations o ON u.organization_id = o.id
+            WHERE u.auth_id = auth.uid()
             AND o.type = 'producer'
         )
     );

@@ -4,19 +4,21 @@ import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { CutSheetBuilder, type CutSheetState, type CutSheetTemplate } from '@/components/cutsheet/CutSheetBuilder'
+import { PrimalCutSheetBuilder, type PrimalCutSheetState, type CutSheetTemplate } from '@/components/cutsheet/PrimalCutSheetBuilder'
 import { ArrowLeft } from 'lucide-react'
 import {
   getTemplatesForOrganization,
   saveAsTemplate,
   loadTemplate
 } from '@/lib/actions/cut-sheet-templates'
-import type { AnimalType, CutSheetItem, CutSheetSausage } from '@/types/database'
+import { getProcessorCutConfigById } from '@/lib/actions/processor-cut-config'
+import type { AnimalType, CutSheetItem, CutSheetSausage, ProcessorCutConfig } from '@/types/database'
 
 interface OrderInfo {
   id: string
   order_number: number
   status: string
+  processor_id: string
   livestock: {
     animal_type: AnimalType
   } | null
@@ -33,6 +35,7 @@ export default function OrderCutSheetPage({ params }: PageProps) {
   const [error, setError] = useState<string | null>(null)
   const [organizationId, setOrganizationId] = useState<string | null>(null)
   const [templates, setTemplates] = useState<CutSheetTemplate[]>([])
+  const [processorConfig, setProcessorConfig] = useState<ProcessorCutConfig | null>(null)
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
 
@@ -63,6 +66,7 @@ export default function OrderCutSheetPage({ params }: PageProps) {
           id,
           order_number,
           status,
+          processor_id,
           livestock:livestock_id (
             animal_type
           )
@@ -79,6 +83,12 @@ export default function OrderCutSheetPage({ params }: PageProps) {
 
       setOrder(orderData)
 
+      // Load processor config for cut options
+      if (orderData.processor_id) {
+        const config = await getProcessorCutConfigById(orderData.processor_id)
+        setProcessorConfig(config)
+      }
+
       // Load templates
       const loadedTemplates = await getTemplatesForOrganization()
       setTemplates(loadedTemplates)
@@ -89,11 +99,11 @@ export default function OrderCutSheetPage({ params }: PageProps) {
     loadOrder()
   }, [orderId, router, supabase])
 
-  const handleSave = async (state: CutSheetState) => {
+  const handleSave = async (state: PrimalCutSheetState) => {
     if (!organizationId || !order) return
 
     try {
-      // Create the cut sheet
+      // Create the cut sheet with the new primal-based format
       const cutSheetData = {
         processing_order_id: order.id,
         producer_id: organizationId,
@@ -109,15 +119,6 @@ export default function OrderCutSheetPage({ params }: PageProps) {
         keep_kidneys: state.organs.kidneys,
         keep_oxtail: state.organs.oxtail,
         keep_bones: state.organs.bones,
-        keep_stew_meat: state.keepStewMeat,
-        keep_short_ribs: state.keepShortRibs,
-        keep_soup_bones: state.keepSoupBones,
-        bacon_or_belly: state.animalType === 'pork' ? state.baconOrBelly : null,
-        ham_preference: state.animalType === 'pork' ? state.hamPreference : null,
-        shoulder_preference: state.animalType === 'pork' ? state.shoulderPreference : null,
-        keep_jowls: state.keepJowls,
-        keep_fat_back: state.keepFatBack,
-        keep_lard_fat: state.keepLardFat,
         special_instructions: state.specialInstructions || null,
         status: 'draft',
       }
@@ -132,19 +133,22 @@ export default function OrderCutSheetPage({ params }: PageProps) {
         throw new Error(cutSheetError?.message || 'Failed to create cut sheet')
       }
 
-      // Insert cut sheet items
-      const cutItems: Omit<CutSheetItem, 'id' | 'created_at' | 'updated_at'>[] = Object.values(state.selectedCuts).map((cut, index) => ({
-        cut_sheet_id: cutSheet.id,
-        cut_category: cut.category,
-        cut_id: cut.cutId,
-        cut_name: cut.cutName,
-        thickness: cut.thickness || null,
-        weight_lbs: cut.weightLbs || null,
-        pieces_per_package: cut.piecesPerPackage,
-        pounds: null,
-        notes: null,
-        sort_order: index,
-      }))
+      // Insert cut sheet items from the new primal-based selections
+      const cutItems: Omit<CutSheetItem, 'id' | 'created_at' | 'updated_at'>[] = state.selectedCuts.map((selection, index) => {
+        const params = state.cutParameters[selection.cutId] || {}
+        return {
+          cut_sheet_id: cutSheet.id,
+          cut_category: 'other' as const, // Primal cuts stored with 'other' category for now
+          cut_id: selection.cutId,
+          cut_name: selection.cutId, // Will be looked up from schema later
+          thickness: params.thickness as string || null,
+          weight_lbs: params.weightLbs as number || null,
+          pieces_per_package: params.piecesPerPackage as number || null,
+          pounds: null,
+          notes: null,
+          sort_order: index,
+        }
+      })
 
       if (cutItems.length > 0) {
         const { error: itemsError } = await supabase
@@ -182,8 +186,11 @@ export default function OrderCutSheetPage({ params }: PageProps) {
     }
   }
 
-  const handleSaveAsTemplate = async (state: CutSheetState, name: string) => {
-    const result = await saveAsTemplate(state, name)
+  const handleSaveAsTemplate = async (state: PrimalCutSheetState, name: string) => {
+    // Note: Template system needs updates for full primal format compatibility
+    // For now, cast to any to allow saving basic template data
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result = await saveAsTemplate(state as any, name)
     if (result.success) {
       // Reload templates list
       const loadedTemplates = await getTemplatesForOrganization()
@@ -193,8 +200,9 @@ export default function OrderCutSheetPage({ params }: PageProps) {
     }
   }
 
-  const handleLoadTemplate = async (templateId: string): Promise<CutSheetState | null> => {
-    return await loadTemplate(templateId)
+  const handleLoadTemplate = async (templateId: string): Promise<PrimalCutSheetState | null> => {
+    // Note: Template system may need updates for full compatibility with new format
+    return await loadTemplate(templateId) as PrimalCutSheetState | null
   }
 
   if (loading) {
@@ -240,9 +248,10 @@ export default function OrderCutSheetPage({ params }: PageProps) {
         </p>
       </div>
 
-      <CutSheetBuilder
+      <PrimalCutSheetBuilder
         initialAnimalType={order.livestock?.animal_type || 'beef'}
         templates={templates}
+        processorConfig={processorConfig}
         onSave={handleSave}
         onSaveAsTemplate={handleSaveAsTemplate}
         onLoadTemplate={handleLoadTemplate}

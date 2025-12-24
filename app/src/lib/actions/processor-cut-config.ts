@@ -40,12 +40,12 @@ export async function getProcessorCutConfig(): Promise<ProcessorCutConfig | null
   // Get user's org
   const { data: userData, error: userError } = await supabase
     .from('users')
-    .select('org_id')
-    .eq('auth_user_id', user.id)
+    .select('organization_id')
+    .eq('auth_id', user.id)
     .single()
 
   if (userError || !userData) return null
-  const orgId = (userData as { org_id: string }).org_id
+  const orgId = (userData as { organization_id: string }).organization_id
 
   // Query processor_cut_config - use type assertion since table is new
   const { data, error } = await supabase
@@ -100,14 +100,14 @@ export async function upsertProcessorCutConfig(
   // Get user's org
   const { data: userData, error: userError } = await supabase
     .from('users')
-    .select('org_id')
-    .eq('auth_user_id', user.id)
+    .select('organization_id')
+    .eq('auth_id', user.id)
     .single()
 
   if (userError || !userData) {
     return { success: false, error: 'User organization not found' }
   }
-  const orgId = (userData as { org_id: string }).org_id
+  const orgId = (userData as { organization_id: string }).organization_id
 
   // Verify org is a processor
   const { data: org, error: orgError } = await supabase
