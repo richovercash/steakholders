@@ -59,17 +59,38 @@ Advanced processor tools, multi-region expansion, consumer subscriptions.
 - Per-producer waitlist limits
 - Priority tiers for repeat customers
 
-### 1.3 Order Enhancements 📋 Planned
-- [ ] Batch animals per order (multiple livestock, same cut sheet)
-- [ ] Segregate orders by animal type
-- [ ] Apply saved cut sheet template to new orders
-- [ ] Animal-type-aware cut sheet (only show relevant options)
+### 1.3 Order Enhancements ✅ Mostly Complete
+- [x] Batch animals per order (multiple livestock, same cut sheet) - commit 60c67fc
+- [x] Animal-type-aware cut sheet (only show relevant options) - built-in to CutSheetBuilder
+- [ ] Segregate orders by animal type in list views
 
-### 1.4 Cut Sheet Templates 📋 Planned
-- [ ] Processor-defined custom cut sheets
-- [ ] Default templates per animal type
-- [ ] Custom options/add-ons
-- [ ] Pricing per cut option (for Phase 2 billing)
+### 1.4 Cut Sheet Templates 🔄 Partially Complete
+- [x] Producer-saved templates - commit 0faf055
+- [x] Load template into new order
+- [ ] **Processor-defined cut sheet configuration** (NEW - see below)
+
+### 1.5 Processor Cut Sheet Configuration 📋 Planned (HIGH PRIORITY)
+**Goal:** Processors control what options their customers see
+
+- [ ] Processor settings page for cut sheet options
+- [ ] Enable/disable animal types (e.g., "We only do beef and pork")
+- [ ] Enable/disable specific cuts per animal
+- [ ] Enable/disable sausage flavors
+- [ ] Add custom cuts/options not in base list
+- [ ] Add pricing per option (for Phase 2 billing)
+- [ ] Processor default templates for each animal type
+- [ ] Producer cut sheet builder filters by processor's enabled options
+
+**Database additions needed:**
+- `processor_cut_options` - which cuts each processor offers
+- `processor_custom_cuts` - processor-specific custom options
+- `processor_cut_pricing` - optional pricing per cut
+
+**Why this matters:**
+- Every processor operates differently
+- Reduces confusion for producers
+- Enables accurate billing in Phase 2
+- Real-world testing will reveal gaps
 
 ---
 
@@ -319,12 +340,14 @@ Advanced processor tools, multi-region expansion, consumer subscriptions.
 
 ## Current Sprint Focus
 
-**Starting Phase 1.3: Order Enhancements**
+**Phase 1.5: Processor Cut Sheet Configuration**
 
-1. Batch animals per order (multiple livestock, same cut sheet)
-2. Segregate orders by animal type
-3. Apply saved cut sheet template to new orders
-4. Animal-type-aware cut sheet (only show relevant options)
+Key insight: Cut sheets are currently producer-centric with static options. Processors need control over what options appear to their customers.
+
+1. Design database schema for processor cut options
+2. Build processor settings UI for cut configuration
+3. Modify CutSheetBuilder to filter by processor's enabled options
+4. Add processor default templates
 
 ---
 
@@ -336,6 +359,8 @@ Advanced processor tools, multi-region expansion, consumer subscriptions.
 | 2025-12-23 | Free for producers always | Lower barrier, producers are struggling |
 | 2025-12-23 | Stripe Connect for payments | Industry standard, handles split payments |
 | 2025-12-23 | Waitlist trading deferred | Core waitlist first, trading adds complexity |
+| 2025-12-23 | Processor-controlled cut sheets needed | Each processor operates differently; static options won't work |
+| 2025-12-23 | Commonize base options, allow customization | Start with standard cuts, let processors enable/disable/add |
 
 ---
 
