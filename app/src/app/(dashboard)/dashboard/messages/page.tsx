@@ -76,21 +76,31 @@ export default async function MessagesPage() {
 
   const conversationList = Array.from(conversations.values())
 
-  // Get the user's organization type to know what orgs they can message
+  // Get the user's organization type to determine messaging rules
   const { data: userOrg } = await supabase
     .from('organizations')
     .select('type')
     .eq('id', profile?.organization_id ?? '')
     .single() as { data: { type: string } | null }
 
-  // Get available organizations to message (opposite type)
-  const targetType = userOrg?.type === 'producer' ? 'processor' : 'producer'
-  const { data: availableOrgs } = await supabase
+  const isProcessor = userOrg?.type === 'processor'
+
+  // Get available organizations to message
+  // Producers can only message processors
+  // Processors can message anyone (producers and other processors)
+  let availableOrgsQuery = supabase
     .from('organizations')
     .select('id, name, type')
-    .eq('type', targetType)
+    .neq('id', profile?.organization_id ?? '')
     .eq('is_active', true)
-    .order('name') as { data: { id: string; name: string; type: string }[] | null }
+    .order('name')
+
+  if (!isProcessor) {
+    // Producers can only message processors
+    availableOrgsQuery = availableOrgsQuery.eq('type', 'processor')
+  }
+
+  const { data: availableOrgs } = await availableOrgsQuery as { data: { id: string; name: string; type: string }[] | null }
 
   // Filter out orgs we already have conversations with
   const existingOrgIds = new Set(conversationList.map(c => c.orgId))
@@ -102,7 +112,7 @@ export default async function MessagesPage() {
         <div>
           <h1 className="text-2xl font-bold">Messages</h1>
           <p className="text-gray-600">
-            Communicate with your {userOrg?.type === 'producer' ? 'processors' : 'producers'}
+            {isProcessor ? 'Communicate with farms and processors' : 'Communicate with your processors'}
           </p>
         </div>
         <NewConversationButton availableOrgs={newConversationOrgs} />
