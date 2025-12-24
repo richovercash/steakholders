@@ -85,14 +85,13 @@ export default async function MessagesPage() {
 
   const isProcessor = userOrg?.type === 'processor'
 
-  // Get available organizations to message
+  // Get all organizations to message (excluding own organization)
   // Producers can only message processors
   // Processors can message anyone (producers and other processors)
   let availableOrgsQuery = supabase
     .from('organizations')
     .select('id, name, type')
     .neq('id', profile?.organization_id ?? '')
-    .eq('is_active', true)
     .order('name')
 
   if (!isProcessor) {
