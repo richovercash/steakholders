@@ -14,70 +14,30 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { Check, AlertTriangle, Save, FolderOpen, ChevronDown, Beef, PiggyBank, Rabbit, Package, Utensils, Bone, Heart } from 'lucide-react'
+import { AlertTriangle, Beef, PiggyBank, Rabbit, Package } from 'lucide-react'
 import { GoatIcon } from '@/components/icons/AnimalIcons'
-import type { AnimalType, CutCategory, SausageFlavor, GroundType, PattySize } from '@/types/database'
+import type { AnimalType, SausageFlavor, GroundType, PattySize } from '@/types/database'
 import {
   CUT_DATA,
-  THICKNESS_OPTIONS,
-  PIECES_OPTIONS,
-  WEIGHT_OPTIONS,
-  SAUSAGE_FLAVORS,
-  ORGAN_OPTIONS,
-  SECTION_INFO,
   validateCutSheet,
   estimateTakeHomeWeight,
   type CutOption,
 } from '@/lib/cut-sheet-data'
 
+// Import sub-components
+import { CutItem, type CutSelection } from './CutItem'
+import { CutSection } from './CutSection'
+import { SausageSection, type SausageSelection } from './SausageSection'
+import { OrgansSection, type OrganSelections } from './OrgansSection'
+import { PorkOptionsSection } from './PorkOptionsSection'
+import { CutSheetSummary } from './CutSheetSummary'
+
 // Local icon data to replace emoji-based ANIMAL_INFO
-const ANIMAL_ICONS: Record<AnimalType, { icon: React.ReactNode; label: string; color: string }> = {
-  beef: { icon: <Beef className="h-5 w-5" />, label: 'Beef', color: 'green' },
-  pork: { icon: <PiggyBank className="h-5 w-5" />, label: 'Pork', color: 'pink' },
-  lamb: { icon: <Rabbit className="h-5 w-5" />, label: 'Lamb', color: 'amber' },
-  goat: { icon: <GoatIcon className="h-5 w-5" size={20} />, label: 'Goat', color: 'stone' },
-}
-
-// Local section icons to replace emoji-based SECTION_INFO icons
-const SECTION_ICONS: Record<string, React.ReactNode> = {
-  steaks: <Utensils className="h-6 w-6 text-red-600" />,
-  roasts: <Package className="h-6 w-6 text-amber-600" />,
-  ribs: <Bone className="h-6 w-6 text-gray-600" />,
-  bacon: <Package className="h-6 w-6 text-rose-600" />,
-  sausage: <Package className="h-6 w-6 text-pink-600" />,
-  ground: <Package className="h-6 w-6 text-brown-600" />,
-  other: <Bone className="h-6 w-6 text-gray-600" />,
-  organs: <Heart className="h-6 w-6 text-red-600" />,
-}
-
-// Types for cut selections
-interface CutSelection {
-  cutId: string
-  cutName: string
-  category: CutCategory
-  thickness?: string
-  weightLbs?: number
-  piecesPerPackage: number
-}
-
-interface SausageSelection {
-  flavor: SausageFlavor
-  pounds: number
-}
-
-interface OrganSelections {
-  liver: boolean
-  heart: boolean
-  tongue: boolean
-  kidneys: boolean
-  oxtail: boolean
-  bones: boolean
+const ANIMAL_ICONS: Record<AnimalType, { icon: React.ReactNode; label: string }> = {
+  beef: { icon: <Beef className="h-5 w-5" />, label: 'Beef' },
+  pork: { icon: <PiggyBank className="h-5 w-5" />, label: 'Pork' },
+  lamb: { icon: <Rabbit className="h-5 w-5" />, label: 'Lamb' },
+  goat: { icon: <GoatIcon className="h-5 w-5" size={20} />, label: 'Goat' },
 }
 
 interface CutSheetState {
@@ -166,7 +126,6 @@ export function CutSheetBuilder({
 
   // Get cuts for current animal type
   const animalCuts = useMemo(() => CUT_DATA[state.animalType], [state.animalType])
-  const organOptions = useMemo(() => ORGAN_OPTIONS[state.animalType], [state.animalType])
 
   // Validation
   const validationErrors = useMemo(() => {
@@ -296,100 +255,30 @@ export function CutSheetBuilder({
     }
   }
 
-  // Filter templates for current animal type
-  const availableTemplates = templates.filter(t => t.animal_type === state.animalType)
-
-  // Render cut item
+  // Render cut item using CutItem component
   const renderCutItem = (cut: CutOption) => {
-    const isSelected = !!state.selectedCuts[cut.id]
-    const selection = state.selectedCuts[cut.id]
     const hasConflict = validationErrors.some(e => e.affectedCuts?.includes(cut.id))
 
     return (
-      <div
+      <CutItem
         key={cut.id}
-        className={`p-4 rounded-lg border-2 transition-all cursor-pointer ${
-          hasConflict
-            ? 'border-amber-400 bg-amber-50'
-            : isSelected
-            ? 'border-green-600 bg-green-50'
-            : 'border-gray-200 bg-gray-50 hover:border-gray-300'
-        }`}
-        onClick={() => toggleCut(cut)}
-      >
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-start gap-3">
-            <div
-              className={`w-5 h-5 rounded border-2 flex items-center justify-center mt-0.5 ${
-                isSelected ? 'bg-green-600 border-green-600' : 'border-gray-300 bg-white'
-              }`}
-            >
-              {isSelected && <Check className="w-3 h-3 text-white" />}
-            </div>
-            <div>
-              <div className="font-medium">{cut.name}</div>
-              {cut.hint && <div className="text-sm text-gray-500">{cut.hint}</div>}
-            </div>
-          </div>
-
-          {isSelected && (
-            <div className="flex gap-2" onClick={e => e.stopPropagation()}>
-              {cut.hasThickness && (
-                <select
-                  className="text-sm border rounded px-2 py-1"
-                  value={selection?.thickness || '1"'}
-                  onChange={e => updateCutParam(cut.id, 'thickness', e.target.value)}
-                >
-                  {THICKNESS_OPTIONS.map(t => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
-              )}
-              {cut.hasWeight && (
-                <select
-                  className="text-sm border rounded px-2 py-1"
-                  value={selection?.weightLbs || 3}
-                  onChange={e => updateCutParam(cut.id, 'weightLbs', Number(e.target.value))}
-                >
-                  {WEIGHT_OPTIONS.map(w => (
-                    <option key={w} value={w}>{w} lbs</option>
-                  ))}
-                </select>
-              )}
-              <select
-                className="text-sm border rounded px-2 py-1"
-                value={selection?.piecesPerPackage || 2}
-                onChange={e => updateCutParam(cut.id, 'piecesPerPackage', Number(e.target.value))}
-              >
-                {PIECES_OPTIONS.map(p => (
-                  <option key={p} value={p}>{p}/pkg</option>
-                ))}
-              </select>
-            </div>
-          )}
-        </div>
-      </div>
+        cut={cut}
+        selection={state.selectedCuts[cut.id]}
+        hasConflict={hasConflict}
+        onToggle={toggleCut}
+        onUpdateParam={updateCutParam}
+      />
     )
   }
 
-  // Render section
+  // Render section using CutSection component
   const renderSection = (sectionKey: string, cuts?: CutOption[]) => {
     if (!cuts || cuts.length === 0) return null
-    const info = SECTION_INFO[sectionKey as keyof typeof SECTION_INFO]
 
     return (
-      <div id={sectionKey} className="mb-8">
-        <div className="flex items-center gap-3 mb-4">
-          <span className="shrink-0">{SECTION_ICONS[sectionKey] || SECTION_ICONS.other}</span>
-          <div>
-            <h3 className="text-lg font-semibold">{info?.label || sectionKey}</h3>
-            <p className="text-sm text-gray-500">{info?.description}</p>
-          </div>
-        </div>
-        <div className="grid gap-3">
-          {cuts.map(renderCutItem)}
-        </div>
-      </div>
+      <CutSection sectionKey={sectionKey} cuts={cuts}>
+        {cuts.map(renderCutItem)}
+      </CutSection>
     )
   }
 
@@ -497,185 +386,33 @@ export function CutSheetBuilder({
 
         {/* Sausage (Pork only) */}
         {state.animalType === 'pork' && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Package className="h-5 w-5 text-rose-600" /> Sausage
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-gray-500 mb-4">Select sausage flavors and specify pounds for each</p>
-              <div className="grid gap-3">
-                {SAUSAGE_FLAVORS.map(sausage => {
-                  const selection = state.sausages.find(s => s.flavor === sausage.id)
-                  const isSelected = !!selection
-
-                  return (
-                    <div
-                      key={sausage.id}
-                      className={`p-4 rounded-lg border-2 transition-all ${
-                        isSelected ? 'border-green-600 bg-green-50' : 'border-gray-200 bg-gray-50'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div
-                          className="flex items-center gap-3 cursor-pointer flex-1"
-                          onClick={() => toggleSausage(sausage.id)}
-                        >
-                          <div
-                            className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
-                              isSelected ? 'bg-green-600 border-green-600' : 'border-gray-300 bg-white'
-                            }`}
-                          >
-                            {isSelected && <Check className="w-3 h-3 text-white" />}
-                          </div>
-                          <div>
-                            <div className="font-medium">{sausage.name}</div>
-                            <div className="text-sm text-gray-500">{sausage.hint}</div>
-                          </div>
-                        </div>
-                        {isSelected && (
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="number"
-                              min="1"
-                              max="50"
-                              value={selection.pounds}
-                              onChange={e => updateSausagePounds(sausage.id, Number(e.target.value))}
-                              className="w-20 border rounded px-2 py-1 text-sm"
-                            />
-                            <span className="text-sm text-gray-500">lbs</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </CardContent>
-          </Card>
+          <SausageSection
+            sausages={state.sausages}
+            onToggle={toggleSausage}
+            onUpdatePounds={updateSausagePounds}
+          />
         )}
 
         {/* Organs */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Heart className="h-5 w-5 text-red-600" /> Organs & Extras
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-gray-500 mb-4">Would you like to keep any of the following?</p>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {organOptions.map(organ => {
-                const isSelected = state.organs[organ.id as keyof OrganSelections]
-
-                return (
-                  <button
-                    key={organ.id}
-                    onClick={() => toggleOrgan(organ.id as keyof OrganSelections)}
-                    className={`p-3 rounded-lg border-2 flex items-center gap-3 transition-all ${
-                      isSelected ? 'border-green-600 bg-green-50' : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <div
-                      className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
-                        isSelected ? 'bg-green-600 border-green-600' : 'border-gray-300 bg-white'
-                      }`}
-                    >
-                      {isSelected && <Check className="w-3 h-3 text-white" />}
-                    </div>
-                    <span className="font-medium">{organ.name}</span>
-                  </button>
-                )
-              })}
-            </div>
-          </CardContent>
-        </Card>
+        <OrgansSection
+          animalType={state.animalType}
+          organs={state.organs}
+          onToggle={toggleOrgan}
+        />
 
         {/* Pork-specific options */}
         {state.animalType === 'pork' && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>Pork Options</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label className="mb-2 block">Bacon / Belly</Label>
-                <div className="flex gap-2">
-                  {(['bacon', 'fresh_belly', 'both', 'none'] as const).map(opt => (
-                    <button
-                      key={opt}
-                      onClick={() => setState(prev => ({ ...prev, baconOrBelly: opt }))}
-                      className={`px-3 py-2 rounded border-2 text-sm capitalize ${
-                        state.baconOrBelly === opt ? 'border-green-600 bg-green-50' : 'border-gray-200'
-                      }`}
-                    >
-                      {opt.replace('_', ' ')}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <Label className="mb-2 block">Ham</Label>
-                <div className="flex gap-2">
-                  {(['sliced', 'roast', 'both', 'none'] as const).map(opt => (
-                    <button
-                      key={opt}
-                      onClick={() => setState(prev => ({ ...prev, hamPreference: opt }))}
-                      className={`px-3 py-2 rounded border-2 text-sm capitalize ${
-                        state.hamPreference === opt ? 'border-green-600 bg-green-50' : 'border-gray-200'
-                      }`}
-                    >
-                      {opt}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <Label className="mb-2 block">Shoulder</Label>
-                <div className="flex gap-2">
-                  {(['sliced', 'roast', 'both', 'none'] as const).map(opt => (
-                    <button
-                      key={opt}
-                      onClick={() => setState(prev => ({ ...prev, shoulderPreference: opt }))}
-                      className={`px-3 py-2 rounded border-2 text-sm capitalize ${
-                        state.shoulderPreference === opt ? 'border-green-600 bg-green-50' : 'border-gray-200'
-                      }`}
-                    >
-                      {opt}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex flex-wrap gap-4">
-                {[
-                  { key: 'keepJowls', label: 'Keep Jowls' },
-                  { key: 'keepFatBack', label: 'Keep Fat Back' },
-                  { key: 'keepLardFat', label: 'Keep Lard Fat' },
-                ].map(({ key, label }) => (
-                  <button
-                    key={key}
-                    onClick={() => setState(prev => ({ ...prev, [key]: !prev[key as keyof CutSheetState] }))}
-                    className={`px-3 py-2 rounded border-2 flex items-center gap-2 ${
-                      state[key as keyof CutSheetState] ? 'border-green-600 bg-green-50' : 'border-gray-200'
-                    }`}
-                  >
-                    <div
-                      className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
-                        state[key as keyof CutSheetState] ? 'bg-green-600 border-green-600' : 'border-gray-300'
-                      }`}
-                    >
-                      {state[key as keyof CutSheetState] && <Check className="w-2.5 h-2.5 text-white" />}
-                    </div>
-                    <span className="text-sm">{label}</span>
-                  </button>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          <PorkOptionsSection
+            options={{
+              baconOrBelly: state.baconOrBelly,
+              hamPreference: state.hamPreference,
+              shoulderPreference: state.shoulderPreference,
+              keepJowls: state.keepJowls,
+              keepFatBack: state.keepFatBack,
+              keepLardFat: state.keepLardFat,
+            }}
+            onChange={(key, value) => setState(prev => ({ ...prev, [key]: value }))}
+          />
         )}
 
         {/* Special Instructions */}
@@ -695,113 +432,20 @@ export function CutSheetBuilder({
       </div>
 
       {/* Sidebar Summary */}
-      <div className="lg:sticky lg:top-6 h-fit">
-        <Card>
-          <CardHeader>
-            <CardTitle>Summary</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label className="text-sm text-gray-500">Animal Type</Label>
-              <div className="font-medium flex items-center gap-2">
-                <span className="shrink-0">{ANIMAL_ICONS[state.animalType].icon}</span>
-                <span>{ANIMAL_ICONS[state.animalType].label}</span>
-              </div>
-            </div>
-
-            <div>
-              <Label className="text-sm text-gray-500">Hanging Weight (if known)</Label>
-              <input
-                type="number"
-                className="w-full border rounded px-3 py-2"
-                placeholder="e.g., 642"
-                value={state.hangingWeight || ''}
-                onChange={e => setState(prev => ({ ...prev, hangingWeight: e.target.value ? Number(e.target.value) : null }))}
-              />
-              {stats.estimatedTakeHome && (
-                <div className="text-sm text-gray-500 mt-1">
-                  Est. take-home: ~{stats.estimatedTakeHome} lbs
-                </div>
-              )}
-            </div>
-
-            <div className="border-t pt-4 space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Cuts Selected</span>
-                <span className="font-medium">{stats.cutCount}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span>Organs</span>
-                <span className="font-medium">{stats.organCount}</span>
-              </div>
-              {state.animalType === 'pork' && (
-                <div className="flex justify-between text-sm">
-                  <span>Sausage Flavors</span>
-                  <span className="font-medium">{stats.sausageCount}</span>
-                </div>
-              )}
-            </div>
-
-            {hasConflicts && (
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
-                Please resolve conflicts before saving
-              </div>
-            )}
-
-            {/* Template Actions */}
-            {(availableTemplates.length > 0 || onSaveAsTemplate) && (
-              <div className="border-t pt-4 space-y-2">
-                <Label className="text-sm text-gray-500">Templates</Label>
-                <div className="flex gap-2">
-                  {availableTemplates.length > 0 && onLoadTemplate && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="sm" disabled={loadingTemplate}>
-                          <FolderOpen className="h-4 w-4 mr-2" />
-                          Load
-                          <ChevronDown className="h-4 w-4 ml-2" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent>
-                        {availableTemplates.map(t => (
-                          <DropdownMenuItem key={t.id} onClick={() => handleLoadTemplate(t.id)}>
-                            {t.template_name}
-                          </DropdownMenuItem>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
-                  {onSaveAsTemplate && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowSaveTemplate(true)}
-                    >
-                      <Save className="h-4 w-4 mr-2" />
-                      Save as Template
-                    </Button>
-                  )}
-                </div>
-              </div>
-            )}
-
-            <div className="border-t pt-4 space-y-2">
-              <Button
-                className="w-full bg-green-700 hover:bg-green-800"
-                onClick={handleSave}
-                disabled={saving || hasConflicts}
-              >
-                {saving ? 'Saving...' : 'Save Cut Sheet'}
-              </Button>
-              {onCancel && (
-                <Button variant="outline" className="w-full" onClick={onCancel}>
-                  Cancel
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <CutSheetSummary
+        animalType={state.animalType}
+        hangingWeight={state.hangingWeight}
+        stats={stats}
+        hasConflicts={hasConflicts}
+        saving={saving}
+        loadingTemplate={loadingTemplate}
+        templates={templates}
+        onHangingWeightChange={(weight) => setState(prev => ({ ...prev, hangingWeight: weight }))}
+        onSave={handleSave}
+        onCancel={onCancel}
+        onLoadTemplate={onLoadTemplate ? handleLoadTemplate : undefined}
+        onShowSaveTemplate={onSaveAsTemplate ? () => setShowSaveTemplate(true) : undefined}
+      />
 
       {/* Save as Template Dialog */}
       <Dialog open={showSaveTemplate} onOpenChange={setShowSaveTemplate}>

@@ -9,7 +9,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { useToast } from '@/hooks/use-toast'
-import { Check, Beef, PiggyBank, Rabbit, Flame, Drumstick } from 'lucide-react'
+import { Check, Beef, PiggyBank, Rabbit, Flame, Drumstick, Bell, Mail, MessageSquare, Package } from 'lucide-react'
+import { Switch } from '@/components/ui/switch'
 import { GoatIcon } from '@/components/icons/AnimalIcons'
 import type { User, Organization } from '@/types/database'
 
@@ -34,12 +35,26 @@ interface ProfileWithOrg extends User {
   organization: Organization | null
 }
 
+interface NotificationPreferences {
+  email_order_updates: boolean
+  email_messages: boolean
+  email_system: boolean
+}
+
+const DEFAULT_NOTIFICATION_PREFS: NotificationPreferences = {
+  email_order_updates: true,
+  email_messages: true,
+  email_system: false,
+}
+
 export default function SettingsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [profile, setProfile] = useState<User | null>(null)
   const [organization, setOrganization] = useState<Organization | null>(null)
   const [selectedServices, setSelectedServices] = useState<string[]>([])
+  const [notificationPrefs, setNotificationPrefs] = useState<NotificationPreferences>(DEFAULT_NOTIFICATION_PREFS)
+  const [savingNotifications, setSavingNotifications] = useState(false)
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
   const { toast } = useToast()
@@ -62,6 +77,14 @@ export default function SettingsPage() {
         setOrganization(data.organization)
         if (data.organization?.services_offered) {
           setSelectedServices(data.organization.services_offered as string[])
+        }
+        // Load notification preferences
+        if (data.notification_preferences && typeof data.notification_preferences === 'object') {
+          const prefs = data.notification_preferences as unknown as Partial<NotificationPreferences>
+          setNotificationPrefs({
+            ...DEFAULT_NOTIFICATION_PREFS,
+            ...prefs,
+          })
         }
       }
       setLoading(false)
@@ -148,6 +171,34 @@ export default function SettingsPage() {
         ? prev.filter(s => s !== serviceId)
         : [...prev, serviceId]
     )
+  }
+
+  const handleNotificationPrefChange = async (key: keyof NotificationPreferences, value: boolean) => {
+    const newPrefs = { ...notificationPrefs, [key]: value }
+    setNotificationPrefs(newPrefs)
+    setSavingNotifications(true)
+
+    const { error } = await supabase
+      .from('users')
+      .update({ notification_preferences: newPrefs } as never)
+      .eq('id', profile!.id)
+
+    setSavingNotifications(false)
+
+    if (error) {
+      // Revert on error
+      setNotificationPrefs(notificationPrefs)
+      toast({
+        title: 'Error',
+        description: 'Failed to update notification preferences',
+        variant: 'destructive',
+      })
+    } else {
+      toast({
+        title: 'Saved',
+        description: 'Notification preferences updated',
+      })
+    }
   }
 
   const handleProcessorUpdate = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -241,6 +292,101 @@ export default function SettingsPage() {
               {saving ? 'Saving...' : 'Save Profile'}
             </Button>
           </form>
+        </CardContent>
+      </Card>
+
+      {/* Notification Preferences */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Bell className="h-5 w-5" />
+            Notification Preferences
+          </CardTitle>
+          <CardDescription>
+            Control how you receive notifications
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Email Notifications Section */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+              <Mail className="h-4 w-4" />
+              Email Notifications
+            </div>
+
+            <div className="space-y-4 pl-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <Package className="h-4 w-4 text-gray-500" />
+                    <Label htmlFor="email_order_updates" className="font-medium">
+                      Order Updates
+                    </Label>
+                  </div>
+                  <p className="text-sm text-gray-500">
+                    Receive emails when orders are submitted, confirmed, or ready
+                  </p>
+                </div>
+                <Switch
+                  id="email_order_updates"
+                  checked={notificationPrefs.email_order_updates}
+                  onCheckedChange={(checked: boolean) => handleNotificationPrefChange('email_order_updates', checked)}
+                  disabled={savingNotifications}
+                />
+              </div>
+
+              <Separator />
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <MessageSquare className="h-4 w-4 text-gray-500" />
+                    <Label htmlFor="email_messages" className="font-medium">
+                      New Messages
+                    </Label>
+                  </div>
+                  <p className="text-sm text-gray-500">
+                    Get notified when you receive a new message
+                  </p>
+                </div>
+                <Switch
+                  id="email_messages"
+                  checked={notificationPrefs.email_messages}
+                  onCheckedChange={(checked: boolean) => handleNotificationPrefChange('email_messages', checked)}
+                  disabled={savingNotifications}
+                />
+              </div>
+
+              <Separator />
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <Bell className="h-4 w-4 text-gray-500" />
+                    <Label htmlFor="email_system" className="font-medium">
+                      System Announcements
+                    </Label>
+                  </div>
+                  <p className="text-sm text-gray-500">
+                    Platform updates, maintenance notices, and tips
+                  </p>
+                </div>
+                <Switch
+                  id="email_system"
+                  checked={notificationPrefs.email_system}
+                  onCheckedChange={(checked: boolean) => handleNotificationPrefChange('email_system', checked)}
+                  disabled={savingNotifications}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-lg bg-gray-50 p-4 text-sm text-gray-600">
+            <p>
+              <strong>Note:</strong> You&apos;ll always receive in-app notifications.
+              These settings only control email delivery.
+            </p>
+          </div>
         </CardContent>
       </Card>
 

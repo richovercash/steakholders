@@ -1,13 +1,7 @@
-// Supabase generated types
-// This file can be regenerated with: npx supabase gen types typescript
+// Supabase types - re-exported from database.ts
+// To regenerate from Supabase schema: npx supabase gen types typescript --project-id YOUR_PROJECT_ID
+//
+// Current types are manually maintained in ./database.ts
+// This provides the Database type expected by Supabase client
 
-export type Json =
-  | string
-  | number
-  | boolean
-  | null
-  | { [key: string]: Json | undefined }
-  | Json[]
-
-// Database types are defined in ./database.ts
-// This file is a placeholder for auto-generated Supabase types
+export type { Database, Json } from './database'

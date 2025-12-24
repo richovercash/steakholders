@@ -29,8 +29,9 @@ export async function getOrganizationById(orgId: string): Promise<Organization |
     return null
   }
 
-  console.log('[getOrganizationById] Found:', data?.name)
-  return data as Organization
+  const org = data as Organization
+  console.log('[getOrganizationById] Found:', org?.name)
+  return org
 }
 
 export async function getConversationMessages(
@@ -151,9 +152,11 @@ export async function getNewMessages(
     return []
   }
 
+  const messages = (data || []) as MessageWithSender[]
+
   // Mark incoming messages as read
-  if (data && data.length > 0) {
-    const incomingMessageIds = data
+  if (messages.length > 0) {
+    const incomingMessageIds = messages
       .filter(msg => msg.sender_org_id === partnerOrgId && !msg.read_at)
       .map(msg => msg.id)
 
@@ -165,5 +168,5 @@ export async function getNewMessages(
     }
   }
 
-  return (data || []) as MessageWithSender[]
+  return messages
 }
