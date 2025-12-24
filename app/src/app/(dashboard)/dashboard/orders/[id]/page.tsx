@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -91,7 +91,7 @@ export default function OrderDetailPage({ params }: PageProps) {
   const [, setOrganizationId] = useState<string | null>(null)
   const [isEditing, setIsEditing] = useState(false)
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   // Editable form state for processor
   const [editForm, setEditForm] = useState({

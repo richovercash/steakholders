@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -41,7 +41,7 @@ export default function SettingsPage() {
   const [organization, setOrganization] = useState<Organization | null>(null)
   const [selectedServices, setSelectedServices] = useState<string[]>([])
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const { toast } = useToast()
 
   const isProcessor = organization?.type === 'processor'

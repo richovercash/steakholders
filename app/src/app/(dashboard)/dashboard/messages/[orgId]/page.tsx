@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, use } from 'react'
+import { useState, useEffect, useRef, use, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -30,7 +30,8 @@ export default function ConversationPage({ params }: PageProps) {
   const [error, setError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
-  const supabase = createClient()
+  // Memoize supabase client to prevent recreation on every render
+  const supabase = useMemo(() => createClient(), [])
 
   // Scroll to bottom when messages change
   const scrollToBottom = () => {

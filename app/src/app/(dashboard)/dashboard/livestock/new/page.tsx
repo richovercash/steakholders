@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -17,7 +17,7 @@ export default function NewLivestockPage() {
   const [error, setError] = useState<string | null>(null)
   const [authorized, setAuthorized] = useState(false)
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   // Check if user is a producer
   useEffect(() => {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -34,7 +34,7 @@ export default function OrderCutSheetPage({ params }: PageProps) {
   const [organizationId, setOrganizationId] = useState<string | null>(null)
   const [templates, setTemplates] = useState<CutSheetTemplate[]>([])
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     async function loadOrder() {
