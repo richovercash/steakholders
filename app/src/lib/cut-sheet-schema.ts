@@ -596,7 +596,7 @@ export const CUT_SHEET_SCHEMA: CutSheetSchema = {
               id: "rib_chops",
               name: "Rib Chops (Cutlets)",
               type: "chop",
-              excludes: ["whole_rack", "crown_roast"],
+              excludes: ["whole_rack", "crown_roast", "lamb_lollipops"],
               parameters: {
                 perPackage: { options: [2, 4], default: 4 },
                 frenched: { type: "boolean", default: true }
@@ -606,13 +606,13 @@ export const CUT_SHEET_SCHEMA: CutSheetSchema = {
               id: "lamb_lollipops",
               name: "Lamb Lollipops (French-trimmed chops)",
               type: "chop",
-              excludes: ["whole_rack", "rib_chops"]
+              excludes: ["whole_rack", "rib_chops", "crown_roast"]
             },
             {
               id: "crown_roast",
               name: "Crown Roast",
               type: "roast",
-              excludes: ["whole_rack", "rib_chops"],
+              excludes: ["whole_rack", "rib_chops", "lamb_lollipops"],
               note: "Uses both racks tied together"
             }
           ]
