@@ -133,16 +133,19 @@ const DEFAULT_STATE: PrimalCutSheetState = {
 
 // Split allocation component - single axis slider for exactly 2 cuts
 // Uses 25% increments: 0%, 25%, 50%, 75%, 100%
+// When a cut goes to 0%, it auto-deselects that cut
 function PrimalSplitAllocator({
   primalName,
   selectedCuts,
   allocations,
   onUpdateAllocation,
+  onDeselectCut,
 }: {
   primalName: string
   selectedCuts: { id: string; name: string }[]
   allocations: Record<string, number>
   onUpdateAllocation: (cutId: string, percentage: number) => void
+  onDeselectCut: (cutId: string) => void
 }) {
   // Only show for exactly 2 cuts (we limit to 2 max for simplicity)
   if (selectedCuts.length !== 2) return null
@@ -154,20 +157,29 @@ function PrimalSplitAllocator({
   const cutBValue = 100 - cutAValue
 
   // Handle slider change - updates both cuts to always total 100%
+  // If one cut goes to 0%, deselect it
   const handleSliderChange = (newCutAValue: number) => {
     // Snap to 25% increments
     const snapped = Math.round(newCutAValue / 25) * 25
-    onUpdateAllocation(cutA.id, snapped)
-    onUpdateAllocation(cutB.id, 100 - snapped)
+
+    if (snapped === 0) {
+      // Cut A goes to 0% - deselect it, keep only cut B
+      onDeselectCut(cutA.id)
+    } else if (snapped === 100) {
+      // Cut B goes to 0% - deselect it, keep only cut A
+      onDeselectCut(cutB.id)
+    } else {
+      // Normal split - update both allocations
+      onUpdateAllocation(cutA.id, snapped)
+      onUpdateAllocation(cutB.id, 100 - snapped)
+    }
   }
 
-  // Preset buttons for quick selection
+  // Preset buttons for quick selection (excluding 0% and 100% since those deselect)
   const presets = [
-    { label: 'All', valueA: 100 },
     { label: '75%', valueA: 75 },
     { label: 'Half', valueA: 50 },
     { label: '25%', valueA: 25 },
-    { label: 'None', valueA: 0 },
   ]
 
   return (
@@ -545,6 +557,7 @@ function PrimalSection({
   onShowWouldDisable,
   onParameterChange,
   onSplitAllocationChange,
+  onDeselectCut,
 }: {
   primal: FilteredPrimal | Primal
   selectedCuts: CutSelection[]
@@ -556,6 +569,7 @@ function PrimalSection({
   onShowWouldDisable: (cutId: string) => void
   onParameterChange: (cutId: string, param: string, value: unknown) => void
   onSplitAllocationChange: (cutId: string, percentage: number) => void
+  onDeselectCut: (cutId: string) => void
 }) {
   const [isOpen, setIsOpen] = useState(true)
   const selectedIds = new Set(selectedCuts.map(s => s.cutId))
@@ -745,6 +759,7 @@ function PrimalSection({
                   selectedCuts={selectedCutsInPrimal.map(c => ({ id: c.id, name: c.name }))}
                   allocations={splitAllocations}
                   onUpdateAllocation={onSplitAllocationChange}
+                  onDeselectCut={onDeselectCut}
                 />
               )
             })()}
@@ -1201,6 +1216,11 @@ export function PrimalCutSheetBuilder({
             onShowWouldDisable={showWouldDisable}
             onParameterChange={handleParameterChange}
             onSplitAllocationChange={(cutId, percentage) => handleSplitAllocationChange(primalId, cutId, percentage)}
+            onDeselectCut={(cutId) => {
+              // Find the cut and toggle it off
+              const cut = getAllCuts(state.animalType).find(c => c.id === cutId)
+              if (cut) toggleCut(cut)
+            }}
           />
         ))}
 
