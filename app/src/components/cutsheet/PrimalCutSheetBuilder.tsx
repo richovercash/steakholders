@@ -131,138 +131,9 @@ const DEFAULT_STATE: PrimalCutSheetState = {
   specialInstructions: '',
 }
 
-// Split allocation component - single axis slider for exactly 2 cuts
-// Uses 25% increments: 0%, 25%, 50%, 75%, 100%
-// When a cut goes to 0%, it auto-deselects that cut
-function PrimalSplitAllocator({
-  primalName,
-  selectedCuts,
-  allocations,
-  onUpdateAllocation,
-  onDeselectCut,
-}: {
-  primalName: string
-  selectedCuts: { id: string; name: string }[]
-  allocations: Record<string, number>
-  onUpdateAllocation: (cutId: string, percentage: number) => void
-  onDeselectCut: (cutId: string) => void
-}) {
-  // Only show for exactly 2 cuts (we limit to 2 max for simplicity)
-  if (selectedCuts.length !== 2) return null
-
-  const [cutA, cutB] = selectedCuts
-
-  // Get allocation for first cut (second cut gets the remainder)
-  const cutAValue = allocations[cutA.id] ?? 50
-  const cutBValue = 100 - cutAValue
-
-  // Handle slider change - updates both cuts to always total 100%
-  // If one cut goes to 0%, deselect it
-  const handleSliderChange = (newCutAValue: number) => {
-    // Snap to 25% increments
-    const snapped = Math.round(newCutAValue / 25) * 25
-
-    if (snapped === 0) {
-      // Cut A goes to 0% - deselect it, keep only cut B
-      onDeselectCut(cutA.id)
-    } else if (snapped === 100) {
-      // Cut B goes to 0% - deselect it, keep only cut A
-      onDeselectCut(cutB.id)
-    } else {
-      // Normal split - update both allocations
-      onUpdateAllocation(cutA.id, snapped)
-      onUpdateAllocation(cutB.id, 100 - snapped)
-    }
-  }
-
-  // Preset buttons for quick selection (excluding 0% and 100% since those deselect)
-  const presets = [
-    { label: '75%', valueA: 75 },
-    { label: 'Half', valueA: 50 },
-    { label: '25%', valueA: 25 },
-  ]
-
-  return (
-    <div className="mt-4 p-4 rounded-lg bg-green-50 border border-green-200">
-      <div className="font-medium text-green-800 mb-3">
-        Split {primalName}
-      </div>
-
-      <p className="text-sm text-green-700 mb-4">
-        How much of the {primalName.toLowerCase()} should go to each cut?
-      </p>
-
-      {/* Axis slider with cut names on each end */}
-      <div className="space-y-3">
-        {/* Labels above slider */}
-        <div className="flex justify-between text-sm">
-          <span className="font-medium text-gray-800">{cutA.name}</span>
-          <span className="font-medium text-gray-800">{cutB.name}</span>
-        </div>
-
-        {/* Slider */}
-        <div className="relative">
-          <input
-            type="range"
-            min="0"
-            max="100"
-            step="25"
-            value={cutAValue}
-            onChange={(e) => handleSliderChange(parseInt(e.target.value))}
-            className="w-full h-3 bg-gradient-to-r from-green-600 to-amber-500 rounded-lg appearance-none cursor-pointer"
-            style={{
-              background: `linear-gradient(to right,
-                #16a34a 0%,
-                #16a34a ${cutAValue}%,
-                #d97706 ${cutAValue}%,
-                #d97706 100%)`
-            }}
-          />
-          {/* Tick marks */}
-          <div className="flex justify-between px-1 mt-1">
-            {[0, 25, 50, 75, 100].map(tick => (
-              <div key={tick} className="flex flex-col items-center">
-                <div className="w-0.5 h-2 bg-gray-400" />
-                <span className="text-xs text-gray-500 mt-0.5">{tick}%</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Current allocation display */}
-        <div className="flex justify-between items-center pt-2">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-green-700">{cutAValue}%</div>
-            <div className="text-xs text-gray-500">{cutA.name}</div>
-          </div>
-          <div className="text-gray-400 text-lg">↔</div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-amber-600">{cutBValue}%</div>
-            <div className="text-xs text-gray-500">{cutB.name}</div>
-          </div>
-        </div>
-
-        {/* Quick preset buttons */}
-        <div className="flex gap-2 pt-2 border-t border-green-200 mt-3">
-          <span className="text-xs text-gray-500 self-center mr-1">{cutA.name}:</span>
-          {presets.map(preset => (
-            <button
-              key={preset.valueA}
-              onClick={() => handleSliderChange(preset.valueA)}
-              className={`px-3 py-1 text-xs rounded-full transition-colors ${
-                cutAValue === preset.valueA
-                  ? 'bg-green-600 text-white'
-                  : 'bg-white border border-gray-300 text-gray-600 hover:border-green-400'
-              }`}
-            >
-              {preset.label}
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-}
+// Split allocation buttons shown on cut cards when part of a 2-cut split
+// Percentages: 25%, 50%, 75% - selecting one auto-updates the other cut
+const SPLIT_PERCENTAGES = [25, 50, 75] as const
 
 // Parameter input component for cut options
 function CutParameterInputs({
@@ -443,8 +314,10 @@ function CutChoiceItem({
   hasWarning,
   warningMessage,
   parameterValues,
+  splitAllocation,
   onToggle,
   onParameterChange,
+  onSplitChange,
 }: {
   cut: CutChoice
   isSelected: boolean
@@ -453,10 +326,14 @@ function CutChoiceItem({
   hasWarning: boolean
   warningMessage?: string
   parameterValues: Record<string, unknown>
+  splitAllocation?: number // undefined = not in a split, number = percentage (25/50/75)
   onToggle: (cut: CutChoice) => void
   onShowWouldDisable: (cutId: string) => void
   onParameterChange: (cutId: string, param: string, value: unknown) => void
+  onSplitChange?: (cutId: string, percentage: number) => void
 }) {
+  const isInSplit = splitAllocation !== undefined
+
   return (
     <TooltipProvider>
       <div
@@ -516,6 +393,29 @@ function CutChoiceItem({
               <p className="text-sm text-gray-500 mt-0.5">{cut.note}</p>
             )}
 
+            {/* Split allocation buttons - shown when this cut is part of a 2-cut split */}
+            {isSelected && isInSplit && onSplitChange && (
+              <div
+                className="flex gap-1.5 mt-2 pt-2 border-t border-green-200"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <span className="text-xs text-gray-500 self-center mr-1">Split:</span>
+                {SPLIT_PERCENTAGES.map(pct => (
+                  <button
+                    key={pct}
+                    onClick={() => onSplitChange(cut.id, pct)}
+                    className={`px-2.5 py-1 text-xs font-medium rounded-full transition-colors ${
+                      splitAllocation === pct
+                        ? 'bg-green-600 text-white'
+                        : 'bg-white border border-gray-300 text-gray-600 hover:border-green-400 hover:bg-green-50'
+                    }`}
+                  >
+                    {pct}%
+                  </button>
+                ))}
+              </div>
+            )}
+
             {/* Parameter inputs when selected - stop propagation so clicks don't toggle */}
             {isSelected && cut.parameters && (
               <div onClick={(e) => e.stopPropagation()}>
@@ -557,7 +457,6 @@ function PrimalSection({
   onShowWouldDisable,
   onParameterChange,
   onSplitAllocationChange,
-  onDeselectCut,
 }: {
   primal: FilteredPrimal | Primal
   selectedCuts: CutSelection[]
@@ -569,7 +468,6 @@ function PrimalSection({
   onShowWouldDisable: (cutId: string) => void
   onParameterChange: (cutId: string, param: string, value: unknown) => void
   onSplitAllocationChange: (cutId: string, percentage: number) => void
-  onDeselectCut: (cutId: string) => void
 }) {
   const [isOpen, setIsOpen] = useState(true)
   const selectedIds = new Set(selectedCuts.map(s => s.cutId))
@@ -580,19 +478,38 @@ function PrimalSection({
     return !filteredCut.disabled
   })
 
-  // Count selected cuts in this primal (for 2-max limit on allowSplit)
-  const selectedCountInPrimal = useMemo(() => {
-    let count = enabledChoices.filter(c => selectedIds.has(c.id)).length
-    if (primal.subSections) {
-      for (const sub of Object.values(primal.subSections)) {
-        count += sub.choices.filter(c => !(c as FilteredCutChoice).disabled && selectedIds.has(c.id)).length
-      }
-    }
-    return count
+  // Get all selected cuts in this primal (main + subsections) - for split allocation
+  const selectedCutsInPrimal = useMemo(() => {
+    const mainSelected = enabledChoices.filter(c => selectedIds.has(c.id))
+    const subSelected = primal.subSections
+      ? Object.values(primal.subSections).flatMap(sub =>
+          sub.choices.filter(c => !(c as FilteredCutChoice).disabled && selectedIds.has(c.id))
+        )
+      : []
+    return [...mainSelected, ...subSelected]
   }, [enabledChoices, primal.subSections, selectedIds])
+
+  const selectedCountInPrimal = selectedCutsInPrimal.length
 
   // For allowSplit primals, limit to 2 selections max
   const atMaxSplitSelections = Boolean(primal.allowSplit) && selectedCountInPrimal >= 2
+
+  // Check if we're in a split scenario (exactly 2 selected in an allowSplit primal)
+  const isInSplitMode = Boolean(primal.allowSplit) && selectedCountInPrimal === 2
+  const splitCutIds = isInSplitMode ? new Set(selectedCutsInPrimal.map(c => c.id)) : new Set<string>()
+
+  // Handler for split allocation changes - updates both cuts to total 100%
+  const handleSplitChange = useCallback((cutId: string, percentage: number) => {
+    if (!isInSplitMode || selectedCutsInPrimal.length !== 2) return
+
+    // Find the other cut in the split
+    const otherCut = selectedCutsInPrimal.find(c => c.id !== cutId)
+    if (!otherCut) return
+
+    // Update both: this cut gets the selected percentage, other gets the remainder
+    onSplitAllocationChange(cutId, percentage)
+    onSplitAllocationChange(otherCut.id, 100 - percentage)
+  }, [isInSplitMode, selectedCutsInPrimal, onSplitAllocationChange])
 
   const hasSelectedCuts = enabledChoices.some(c => selectedIds.has(c.id)) ||
     (primal.subSections && Object.values(primal.subSections).some(sub => {
@@ -667,6 +584,10 @@ function PrimalSection({
                     ? 'Maximum of 2 cuts can be combined from this section'
                     : undefined
 
+                  // Split allocation - only if this cut is in a 2-cut split
+                  const inSplit = splitCutIds.has(cut.id)
+                  const splitAllocation = inSplit ? (splitAllocations[cut.id] ?? 50) : undefined
+
                   return (
                     <CutChoiceItem
                       key={cut.id}
@@ -677,9 +598,11 @@ function PrimalSection({
                       hasWarning={!!warning}
                       warningMessage={warning?.message}
                       parameterValues={cutParameters[cut.id] || {}}
+                      splitAllocation={splitAllocation}
                       onToggle={onToggleCut}
                       onShowWouldDisable={onShowWouldDisable}
                       onParameterChange={onParameterChange}
+                      onSplitChange={inSplit ? handleSplitChange : undefined}
                     />
                   )
                 })}
@@ -717,6 +640,10 @@ function PrimalSection({
                         ? 'Maximum of 2 cuts can be combined from this section'
                         : undefined
 
+                      // Split allocation - only if this cut is in a 2-cut split
+                      const inSplit = splitCutIds.has(cut.id)
+                      const splitAllocation = inSplit ? (splitAllocations[cut.id] ?? 50) : undefined
+
                       return (
                         <CutChoiceItem
                           key={cut.id}
@@ -727,9 +654,11 @@ function PrimalSection({
                           hasWarning={!!warning}
                           warningMessage={warning?.message}
                           parameterValues={cutParameters[cut.id] || {}}
+                          splitAllocation={splitAllocation}
                           onToggle={onToggleCut}
                           onShowWouldDisable={onShowWouldDisable}
                           onParameterChange={onParameterChange}
+                          onSplitChange={inSplit ? handleSplitChange : undefined}
                         />
                       )
                     })}
@@ -737,32 +666,6 @@ function PrimalSection({
                 </div>
               )
             })}
-
-            {/* Split Allocation UI - show when primal allows split and multiple cuts selected */}
-            {primal.allowSplit && (() => {
-              // Get all selected cuts from this primal (main + subsections)
-              const selectedCutsInPrimal = [
-                ...enabledChoices.filter(c => selectedIds.has(c.id)),
-                ...(primal.subSections
-                  ? Object.values(primal.subSections).flatMap(sub =>
-                      sub.choices.filter(c => !(c as FilteredCutChoice).disabled && selectedIds.has(c.id))
-                    )
-                  : []
-                )
-              ]
-
-              if (selectedCutsInPrimal.length < 2) return null
-
-              return (
-                <PrimalSplitAllocator
-                  primalName={primal.displayName}
-                  selectedCuts={selectedCutsInPrimal.map(c => ({ id: c.id, name: c.name }))}
-                  allocations={splitAllocations}
-                  onUpdateAllocation={onSplitAllocationChange}
-                  onDeselectCut={onDeselectCut}
-                />
-              )
-            })()}
           </CardContent>
         </CollapsibleContent>
       </Card>
@@ -1216,11 +1119,6 @@ export function PrimalCutSheetBuilder({
             onShowWouldDisable={showWouldDisable}
             onParameterChange={handleParameterChange}
             onSplitAllocationChange={(cutId, percentage) => handleSplitAllocationChange(primalId, cutId, percentage)}
-            onDeselectCut={(cutId) => {
-              // Find the cut and toggle it off
-              const cut = getAllCuts(state.animalType).find(c => c.id === cutId)
-              if (cut) toggleCut(cut)
-            }}
           />
         ))}
 
