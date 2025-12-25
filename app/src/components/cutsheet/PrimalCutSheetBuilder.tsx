@@ -131,7 +131,8 @@ const DEFAULT_STATE: PrimalCutSheetState = {
   specialInstructions: '',
 }
 
-// Split allocation component for primals that allow splitting between multiple cuts
+// Split allocation component - single axis slider for exactly 2 cuts
+// Uses 25% increments: 0%, 25%, 50%, 75%, 100%
 function PrimalSplitAllocator({
   primalName,
   selectedCuts,
@@ -143,91 +144,110 @@ function PrimalSplitAllocator({
   allocations: Record<string, number>
   onUpdateAllocation: (cutId: string, percentage: number) => void
 }) {
-  // Calculate total and remaining
-  const total = Object.values(allocations).reduce((sum, val) => sum + val, 0)
-  const isValid = Math.abs(total - 100) < 0.01
+  // Only show for exactly 2 cuts (we limit to 2 max for simplicity)
+  if (selectedCuts.length !== 2) return null
 
-  // Auto-distribute evenly if no allocations set
-  const effectiveAllocations = useMemo(() => {
-    if (selectedCuts.length === 0) return {}
+  const [cutA, cutB] = selectedCuts
 
-    // If allocations are empty, distribute evenly
-    const hasAllocations = selectedCuts.some(cut => allocations[cut.id] !== undefined)
-    if (!hasAllocations) {
-      const evenSplit = Math.floor(100 / selectedCuts.length)
-      const result: Record<string, number> = {}
-      selectedCuts.forEach((cut, i) => {
-        // Give the remainder to the last cut
-        result[cut.id] = i === selectedCuts.length - 1
-          ? 100 - (evenSplit * (selectedCuts.length - 1))
-          : evenSplit
-      })
-      return result
-    }
+  // Get allocation for first cut (second cut gets the remainder)
+  const cutAValue = allocations[cutA.id] ?? 50
+  const cutBValue = 100 - cutAValue
 
-    return allocations
-  }, [selectedCuts, allocations])
+  // Handle slider change - updates both cuts to always total 100%
+  const handleSliderChange = (newCutAValue: number) => {
+    // Snap to 25% increments
+    const snapped = Math.round(newCutAValue / 25) * 25
+    onUpdateAllocation(cutA.id, snapped)
+    onUpdateAllocation(cutB.id, 100 - snapped)
+  }
 
-  if (selectedCuts.length < 2) return null
+  // Preset buttons for quick selection
+  const presets = [
+    { label: 'All', valueA: 100 },
+    { label: '75%', valueA: 75 },
+    { label: 'Half', valueA: 50 },
+    { label: '25%', valueA: 25 },
+    { label: 'None', valueA: 0 },
+  ]
 
   return (
     <div className="mt-4 p-4 rounded-lg bg-green-50 border border-green-200">
-      <div className="flex items-center gap-2 mb-3">
-        <span className="font-medium text-green-800">
-          Split {primalName} Allocation
-        </span>
-        <span className={`text-xs px-2 py-0.5 rounded ${
-          isValid ? 'bg-green-200 text-green-800' : 'bg-amber-200 text-amber-800'
-        }`}>
-          {total.toFixed(0)}% allocated
-        </span>
+      <div className="font-medium text-green-800 mb-3">
+        Split {primalName}
       </div>
 
       <p className="text-sm text-green-700 mb-4">
-        Divide this primal between your selected cuts. Allocations must total 100%.
+        How much of the {primalName.toLowerCase()} should go to each cut?
       </p>
 
+      {/* Axis slider with cut names on each end */}
       <div className="space-y-3">
-        {selectedCuts.map(cut => {
-          const value = effectiveAllocations[cut.id] ?? 0
-          return (
-            <div key={cut.id} className="flex items-center gap-3">
-              <span className="flex-1 text-sm font-medium text-gray-700 min-w-[120px]">
-                {cut.name}
-              </span>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={value}
-                onChange={(e) => onUpdateAllocation(cut.id, parseInt(e.target.value))}
-                className="flex-[2] h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-green-600"
-              />
-              <div className="w-20 flex items-center gap-1">
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={value}
-                  onChange={(e) => onUpdateAllocation(cut.id, Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
-                  className="w-14 text-sm border rounded px-2 py-1 text-center"
-                />
-                <span className="text-sm text-gray-500">%</span>
-              </div>
-            </div>
-          )
-        })}
-      </div>
-
-      {!isValid && (
-        <div className="mt-3 text-sm text-amber-700 flex items-center gap-2">
-          <AlertCircle className="w-4 h-4" />
-          {total < 100
-            ? `${(100 - total).toFixed(0)}% remaining to allocate`
-            : `${(total - 100).toFixed(0)}% over-allocated - please reduce`
-          }
+        {/* Labels above slider */}
+        <div className="flex justify-between text-sm">
+          <span className="font-medium text-gray-800">{cutA.name}</span>
+          <span className="font-medium text-gray-800">{cutB.name}</span>
         </div>
-      )}
+
+        {/* Slider */}
+        <div className="relative">
+          <input
+            type="range"
+            min="0"
+            max="100"
+            step="25"
+            value={cutAValue}
+            onChange={(e) => handleSliderChange(parseInt(e.target.value))}
+            className="w-full h-3 bg-gradient-to-r from-green-600 to-amber-500 rounded-lg appearance-none cursor-pointer"
+            style={{
+              background: `linear-gradient(to right,
+                #16a34a 0%,
+                #16a34a ${cutAValue}%,
+                #d97706 ${cutAValue}%,
+                #d97706 100%)`
+            }}
+          />
+          {/* Tick marks */}
+          <div className="flex justify-between px-1 mt-1">
+            {[0, 25, 50, 75, 100].map(tick => (
+              <div key={tick} className="flex flex-col items-center">
+                <div className="w-0.5 h-2 bg-gray-400" />
+                <span className="text-xs text-gray-500 mt-0.5">{tick}%</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Current allocation display */}
+        <div className="flex justify-between items-center pt-2">
+          <div className="text-center">
+            <div className="text-2xl font-bold text-green-700">{cutAValue}%</div>
+            <div className="text-xs text-gray-500">{cutA.name}</div>
+          </div>
+          <div className="text-gray-400 text-lg">↔</div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-amber-600">{cutBValue}%</div>
+            <div className="text-xs text-gray-500">{cutB.name}</div>
+          </div>
+        </div>
+
+        {/* Quick preset buttons */}
+        <div className="flex gap-2 pt-2 border-t border-green-200 mt-3">
+          <span className="text-xs text-gray-500 self-center mr-1">{cutA.name}:</span>
+          {presets.map(preset => (
+            <button
+              key={preset.valueA}
+              onClick={() => handleSliderChange(preset.valueA)}
+              className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                cutAValue === preset.valueA
+                  ? 'bg-green-600 text-white'
+                  : 'bg-white border border-gray-300 text-gray-600 hover:border-green-400'
+              }`}
+            >
+              {preset.label}
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }
@@ -402,7 +422,7 @@ function CutParameterInputs({
   )
 }
 
-// Individual cut item component
+// Individual cut item component - entire card is clickable
 function CutChoiceItem({
   cut,
   isSelected,
@@ -412,7 +432,6 @@ function CutChoiceItem({
   warningMessage,
   parameterValues,
   onToggle,
-  onShowWouldDisable,
   onParameterChange,
 }: {
   cut: CutChoice
@@ -429,25 +448,24 @@ function CutChoiceItem({
   return (
     <TooltipProvider>
       <div
-        className={`relative p-3 border rounded-lg transition-all ${
+        onClick={() => !isDisabled && onToggle(cut)}
+        className={`relative p-3 border-2 rounded-lg transition-all cursor-pointer ${
           isSelected
-            ? 'border-green-600 bg-green-50'
+            ? 'border-green-600 bg-green-50 shadow-sm'
             : isDisabled
-            ? 'border-gray-200 bg-gray-50 opacity-60'
-            : 'border-gray-200 hover:border-gray-300'
+            ? 'border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed'
+            : 'border-gray-200 hover:border-green-400 hover:bg-green-50/50'
         }`}
       >
         <div className="flex items-start gap-3">
-          {/* Checkbox / Radio indicator */}
-          <button
-            onClick={() => !isDisabled && onToggle(cut)}
-            disabled={isDisabled}
-            className={`mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+          {/* Checkbox indicator */}
+          <div
+            className={`mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors shrink-0 ${
               isSelected
                 ? 'bg-green-600 border-green-600'
                 : isDisabled
-                ? 'border-gray-300 cursor-not-allowed'
-                : 'border-gray-400 hover:border-green-500'
+                ? 'border-gray-300'
+                : 'border-gray-400'
             }`}
           >
             {isSelected && (
@@ -456,11 +474,11 @@ function CutChoiceItem({
               </svg>
             )}
             {isDisabled && <Ban className="w-3 h-3 text-gray-400" />}
-          </button>
+          </div>
 
           {/* Cut info */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className={`font-medium ${isDisabled ? 'text-gray-400' : 'text-gray-900'}`}>
                 {cut.name}
               </span>
@@ -472,7 +490,7 @@ function CutChoiceItem({
               )}
               {hasWarning && (
                 <Tooltip>
-                  <TooltipTrigger>
+                  <TooltipTrigger onClick={(e) => e.stopPropagation()}>
                     <AlertCircle className="w-4 h-4 text-amber-500" />
                   </TooltipTrigger>
                   <TooltipContent>
@@ -486,33 +504,24 @@ function CutChoiceItem({
               <p className="text-sm text-gray-500 mt-0.5">{cut.note}</p>
             )}
 
-            {/* Show what would be disabled if hovering/focusing */}
-            {!isSelected && !isDisabled && (
-              <button
-                onClick={() => onShowWouldDisable(cut.id)}
-                className="text-xs text-gray-400 hover:text-gray-600 mt-1 flex items-center gap-1"
-              >
-                <Info className="w-3 h-3" />
-                See what this disables
-              </button>
-            )}
-
-            {/* Parameter inputs when selected */}
+            {/* Parameter inputs when selected - stop propagation so clicks don't toggle */}
             {isSelected && cut.parameters && (
-              <CutParameterInputs
-                cut={cut}
-                values={parameterValues}
-                onChange={(param, value) => onParameterChange(cut.id, param, value)}
-              />
+              <div onClick={(e) => e.stopPropagation()}>
+                <CutParameterInputs
+                  cut={cut}
+                  values={parameterValues}
+                  onChange={(param, value) => onParameterChange(cut.id, param, value)}
+                />
+              </div>
             )}
           </div>
         </div>
 
-        {/* Disabled overlay with reason */}
+        {/* Disabled overlay with reason tooltip */}
         {isDisabled && disabledReason && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className="absolute inset-0 cursor-not-allowed" />
+              <div className="absolute inset-0" />
             </TooltipTrigger>
             <TooltipContent>
               <p className="max-w-xs">{disabledReason}</p>
@@ -556,6 +565,20 @@ function PrimalSection({
     const filteredCut = c as FilteredCutChoice
     return !filteredCut.disabled
   })
+
+  // Count selected cuts in this primal (for 2-max limit on allowSplit)
+  const selectedCountInPrimal = useMemo(() => {
+    let count = enabledChoices.filter(c => selectedIds.has(c.id)).length
+    if (primal.subSections) {
+      for (const sub of Object.values(primal.subSections)) {
+        count += sub.choices.filter(c => !(c as FilteredCutChoice).disabled && selectedIds.has(c.id)).length
+      }
+    }
+    return count
+  }, [enabledChoices, primal.subSections, selectedIds])
+
+  // For allowSplit primals, limit to 2 selections max
+  const atMaxSplitSelections = Boolean(primal.allowSplit) && selectedCountInPrimal >= 2
 
   const hasSelectedCuts = enabledChoices.some(c => selectedIds.has(c.id)) ||
     (primal.subSections && Object.values(primal.subSections).some(sub => {
@@ -618,14 +641,25 @@ function PrimalSection({
                 {enabledChoices.map(cut => {
                   const avail = availability.find(a => a.cutId === cut.id)
                   const warning = warnings.find(w => w.cutId === cut.id)
+                  const isSelected = selectedIds.has(cut.id)
+
+                  // Disable if: not available OR (at max split and not already selected)
+                  const notAvailable = avail ? !avail.available : false
+                  const maxSplitReached = atMaxSplitSelections && !isSelected
+                  const isDisabled = notAvailable || maxSplitReached
+                  const disabledReason = notAvailable
+                    ? avail?.reason
+                    : maxSplitReached
+                    ? 'Maximum of 2 cuts can be combined from this section'
+                    : undefined
 
                   return (
                     <CutChoiceItem
                       key={cut.id}
                       cut={cut}
-                      isSelected={selectedIds.has(cut.id)}
-                      isDisabled={!avail?.available}
-                      disabledReason={avail?.reason}
+                      isSelected={isSelected}
+                      isDisabled={isDisabled}
+                      disabledReason={disabledReason}
                       hasWarning={!!warning}
                       warningMessage={warning?.message}
                       parameterValues={cutParameters[cut.id] || {}}
@@ -657,14 +691,25 @@ function PrimalSection({
                     {enabledSubChoices.map(cut => {
                       const avail = availability.find(a => a.cutId === cut.id)
                       const warning = warnings.find(w => w.cutId === cut.id)
+                      const isSelected = selectedIds.has(cut.id)
+
+                      // Disable if: not available OR (at max split and not already selected)
+                      const notAvailable = avail ? !avail.available : false
+                      const maxSplitReached = atMaxSplitSelections && !isSelected
+                      const isDisabled = notAvailable || maxSplitReached
+                      const disabledReason = notAvailable
+                        ? avail?.reason
+                        : maxSplitReached
+                        ? 'Maximum of 2 cuts can be combined from this section'
+                        : undefined
 
                       return (
                         <CutChoiceItem
                           key={cut.id}
                           cut={cut}
-                          isSelected={selectedIds.has(cut.id)}
-                          isDisabled={!avail?.available}
-                          disabledReason={avail?.reason}
+                          isSelected={isSelected}
+                          isDisabled={isDisabled}
+                          disabledReason={disabledReason}
                           hasWarning={!!warning}
                           warningMessage={warning?.message}
                           parameterValues={cutParameters[cut.id] || {}}
