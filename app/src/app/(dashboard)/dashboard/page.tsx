@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { ClipboardList, Calendar, Truck, MessageSquare, AlertCircle, ArrowRight, Plus, Search } from 'lucide-react'
+import { ClipboardList, Calendar, Truck, MessageSquare, AlertCircle, ArrowRight, Plus, Search, FileText } from 'lucide-react'
 import type { OrganizationType } from '@/types/database'
 
 interface ProfileWithOrg {
@@ -27,6 +27,7 @@ interface OrderWithRelations {
   producer: { name: string } | null
   processor: { name: string } | null
   livestock: { tag_number: string | null; animal_type: string } | null
+  cut_sheets: { id: string; status: string }[] | null
 }
 
 export default async function DashboardPage() {
@@ -54,7 +55,8 @@ export default async function DashboardPage() {
       *,
       producer:organizations!producer_id(name),
       processor:organizations!processor_id(name),
-      livestock(tag_number, animal_type)
+      livestock(tag_number, animal_type),
+      cut_sheets(id, status)
     `)
     .or(
       isProducer
@@ -73,7 +75,8 @@ export default async function DashboardPage() {
         *,
         producer:organizations!producer_id(name),
         processor:organizations!processor_id(name),
-        livestock(tag_number, animal_type)
+        livestock(tag_number, animal_type),
+        cut_sheets(id, status)
       `)
       .eq('processor_id', organization.id)
       .eq('status', 'submitted')
@@ -342,43 +345,65 @@ export default async function DashboardPage() {
         <CardContent>
           {orders && orders.length > 0 ? (
             <div className="space-y-4">
-              {orders.map((order) => (
-                <Link
-                  key={order.id}
-                  href={`/dashboard/orders/${order.id}`}
-                  className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
-                >
-                  <div className="flex items-center gap-4">
-                    <div>
-                      <p className="font-medium">
-                        Order #{order.order_number}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        {isProducer
-                          ? order.processor?.name
-                          : order.producer?.name}
-                        {order.livestock && (
-                          <span>
-                            {' '}&middot; {order.livestock.animal_type}{' '}
-                            {order.livestock.tag_number && `#${order.livestock.tag_number}`}
-                          </span>
-                        )}
-                      </p>
+              {orders.map((order) => {
+                const hasCutSheet = order.cut_sheets && order.cut_sheets.length > 0
+                return (
+                  <div
+                    key={order.id}
+                    className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                  >
+                    <Link
+                      href={`/dashboard/orders/${order.id}`}
+                      className="flex-1"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div>
+                          <p className="font-medium">
+                            Order #{order.order_number}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            {isProducer
+                              ? order.processor?.name
+                              : order.producer?.name}
+                            {order.livestock && (
+                              <span>
+                                {' '}&middot; {order.livestock.animal_type}{' '}
+                                {order.livestock.tag_number && `#${order.livestock.tag_number}`}
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    </Link>
+                    <div className="flex items-center gap-3">
+                      {isProducer && (
+                        <Link
+                          href={`/dashboard/orders/${order.id}/cut-sheet`}
+                          className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
+                            hasCutSheet
+                              ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                              : 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                          }`}
+                        >
+                          <FileText className="h-3 w-3" />
+                          {hasCutSheet ? 'Cut Sheet' : 'Add Cut Sheet'}
+                        </Link>
+                      )}
+                      {order.status === 'in_progress' && (
+                        <Badge variant="outline">
+                          {stageLabels[order.processing_stage] || order.processing_stage}
+                        </Badge>
+                      )}
+                      <Badge className={statusColors[order.status]}>
+                        {order.status.replace('_', ' ')}
+                      </Badge>
+                      <Link href={`/dashboard/orders/${order.id}`}>
+                        <ArrowRight className="h-4 w-4 text-gray-400" />
+                      </Link>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    {order.status === 'in_progress' && (
-                      <Badge variant="outline">
-                        {stageLabels[order.processing_stage] || order.processing_stage}
-                      </Badge>
-                    )}
-                    <Badge className={statusColors[order.status]}>
-                      {order.status.replace('_', ' ')}
-                    </Badge>
-                    <ArrowRight className="h-4 w-4 text-gray-400" />
-                  </div>
-                </Link>
-              ))}
+                )
+              })}
             </div>
           ) : (
             <div className="text-center py-8 text-gray-500">
