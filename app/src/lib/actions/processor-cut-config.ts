@@ -124,22 +124,28 @@ export async function upsertProcessorCutConfig(
     return { success: false, error: 'Only processors can configure cut options' }
   }
 
+  // Build update object, only including fields that are provided
+  // This prevents overwriting existing values with undefined
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const updateData: Record<string, any> = {
+    processor_id: orgId,
+    updated_at: new Date().toISOString(),
+  }
+
+  if (config.enabled_animals !== undefined) updateData.enabled_animals = config.enabled_animals
+  if (config.disabled_cuts !== undefined) updateData.disabled_cuts = config.disabled_cuts
+  if (config.disabled_sausage_flavors !== undefined) updateData.disabled_sausage_flavors = config.disabled_sausage_flavors
+  if (config.custom_cuts !== undefined) updateData.custom_cuts = config.custom_cuts
+  if (config.default_templates !== undefined) updateData.default_templates = config.default_templates
+  if (config.processing_fees !== undefined) updateData.processing_fees = config.processing_fees
+  if (config.min_hanging_weight !== undefined) updateData.min_hanging_weight = config.min_hanging_weight
+  if (config.max_hanging_weight !== undefined) updateData.max_hanging_weight = config.max_hanging_weight
+  if (config.producer_notes !== undefined) updateData.producer_notes = config.producer_notes
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (supabase as any)
     .from('processor_cut_config')
-    .upsert({
-      processor_id: orgId,
-      enabled_animals: config.enabled_animals,
-      disabled_cuts: config.disabled_cuts,
-      disabled_sausage_flavors: config.disabled_sausage_flavors,
-      custom_cuts: config.custom_cuts || [],
-      default_templates: config.default_templates || [],
-      processing_fees: config.processing_fees || {},
-      min_hanging_weight: config.min_hanging_weight,
-      max_hanging_weight: config.max_hanging_weight,
-      producer_notes: config.producer_notes,
-      updated_at: new Date().toISOString(),
-    }, {
+    .upsert(updateData, {
       onConflict: 'processor_id',
     })
 
