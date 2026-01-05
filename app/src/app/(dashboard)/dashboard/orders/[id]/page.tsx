@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { ArrowLeft, FileText, Calendar, Truck, Package, CheckCircle, Edit2, Save, X } from 'lucide-react'
+import { CutSheetViewer } from '@/components/cutsheet/CutSheetViewer'
 import { notifyOrderStatusChange, notifyProcessingStageChange } from '@/lib/notifications/actions'
 import { notifyNextInWaitlist } from '@/lib/actions/waitlist'
 import type { AnimalType, OrderStatus, ProcessingStage, OrganizationType } from '@/types/database'
@@ -18,15 +19,24 @@ interface CutSheetItem {
   id: string
   cut_id: string
   cut_name: string
+  cut_category: string
   thickness: string | null
   weight_lbs: number | null
   pieces_per_package: number | null
+  notes: string | null
+}
+
+interface CutSheetSausage {
+  id: string
+  flavor: string
+  pounds: number
 }
 
 interface CutSheetData {
   id: string
   status: string
   animal_type: AnimalType
+  hanging_weight_lbs: number | null
   ground_type: string | null
   ground_package_weight_lbs: number | null
   patty_size: string | null
@@ -38,6 +48,7 @@ interface CutSheetData {
   keep_bones: boolean
   special_instructions: string | null
   cut_sheet_items: CutSheetItem[]
+  cut_sheet_sausages: CutSheetSausage[]
 }
 
 interface OrderWithRelations {
@@ -196,13 +207,14 @@ export default function OrderDetailPage({ params }: PageProps) {
       return
     }
 
-    // Check for cut sheet with full data including items
+    // Check for cut sheet with full data including items and sausages
     const { data: cutSheetData } = await supabase
       .from('cut_sheets')
       .select(`
         id,
         status,
         animal_type,
+        hanging_weight_lbs,
         ground_type,
         ground_package_weight_lbs,
         patty_size,
@@ -217,9 +229,16 @@ export default function OrderDetailPage({ params }: PageProps) {
           id,
           cut_id,
           cut_name,
+          cut_category,
           thickness,
           weight_lbs,
-          pieces_per_package
+          pieces_per_package,
+          notes
+        ),
+        cut_sheet_sausages (
+          id,
+          flavor,
+          pounds
         )
       `)
       .eq('processing_order_id', orderId)
@@ -806,103 +825,38 @@ export default function OrderDetailPage({ params }: PageProps) {
       </Card>
 
       {/* Cut Sheet */}
-      <Card className="mb-6">
+      <Card className="mb-6" id="cut-sheet-print-area">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Cut Sheet
-          </CardTitle>
-          <CardDescription>
-            {isProcessor ? 'Producer cutting instructions' : 'Specify how you want your meat cut and packaged'}
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Cut Sheet
+              </CardTitle>
+              <CardDescription>
+                {isProcessor ? 'Producer cutting instructions' : 'Specify how you want your meat cut and packaged'}
+              </CardDescription>
+            </div>
+            {order.cut_sheet && !isProcessor && (
+              <Link href={`/dashboard/orders/${order.id}/cut-sheet`}>
+                <Button variant="outline" size="sm">
+                  Edit Cut Sheet
+                </Button>
+              </Link>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {order.cut_sheet ? (
-            <div className="space-y-4">
-              {/* Header with status and edit button */}
-              <div className="flex items-center justify-between">
-                <span className={`px-2 py-1 rounded text-sm ${
-                  order.cut_sheet.status === 'submitted' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
-                }`}>
-                  {order.cut_sheet.status.charAt(0).toUpperCase() + order.cut_sheet.status.slice(1)}
-                </span>
-                {!isProcessor && (
-                  <Link href={`/dashboard/orders/${order.id}/cut-sheet`}>
-                    <Button variant="outline" size="sm">
-                      Edit Cut Sheet
-                    </Button>
-                  </Link>
-                )}
-              </div>
-
-              {/* Cut Selections */}
-              {order.cut_sheet.cut_sheet_items && order.cut_sheet.cut_sheet_items.length > 0 && (
-                <div>
-                  <h4 className="font-medium text-sm text-gray-700 mb-2">Selected Cuts</h4>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                    {order.cut_sheet.cut_sheet_items.map((item) => (
-                      <div
-                        key={item.id}
-                        className="bg-green-50 border border-green-200 rounded px-3 py-2 text-sm"
-                      >
-                        <div className="font-medium text-green-800">
-                          {item.cut_name || item.cut_id.replace(/_/g, ' ')}
-                        </div>
-                        {(item.thickness || item.pieces_per_package) && (
-                          <div className="text-xs text-green-600">
-                            {item.thickness && <span>{item.thickness}</span>}
-                            {item.thickness && item.pieces_per_package && <span> · </span>}
-                            {item.pieces_per_package && <span>{item.pieces_per_package}/pkg</span>}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Ground Meat Preferences */}
-              {order.cut_sheet.ground_type && (
-                <div>
-                  <h4 className="font-medium text-sm text-gray-700 mb-2">Ground Meat</h4>
-                  <div className="bg-gray-50 rounded p-3 text-sm">
-                    <span className="capitalize">{order.cut_sheet.ground_type}</span>
-                    {order.cut_sheet.ground_package_weight_lbs && (
-                      <span> · {order.cut_sheet.ground_package_weight_lbs} lb packages</span>
-                    )}
-                    {order.cut_sheet.patty_size && (
-                      <span> · {order.cut_sheet.patty_size} lb patties</span>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Organs/Extras */}
-              {(order.cut_sheet.keep_liver || order.cut_sheet.keep_heart || order.cut_sheet.keep_tongue ||
-                order.cut_sheet.keep_kidneys || order.cut_sheet.keep_oxtail || order.cut_sheet.keep_bones) && (
-                <div>
-                  <h4 className="font-medium text-sm text-gray-700 mb-2">Keep</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {order.cut_sheet.keep_liver && <span className="bg-amber-50 text-amber-700 px-2 py-1 rounded text-xs">Liver</span>}
-                    {order.cut_sheet.keep_heart && <span className="bg-amber-50 text-amber-700 px-2 py-1 rounded text-xs">Heart</span>}
-                    {order.cut_sheet.keep_tongue && <span className="bg-amber-50 text-amber-700 px-2 py-1 rounded text-xs">Tongue</span>}
-                    {order.cut_sheet.keep_kidneys && <span className="bg-amber-50 text-amber-700 px-2 py-1 rounded text-xs">Kidneys</span>}
-                    {order.cut_sheet.keep_oxtail && <span className="bg-amber-50 text-amber-700 px-2 py-1 rounded text-xs">Oxtail</span>}
-                    {order.cut_sheet.keep_bones && <span className="bg-amber-50 text-amber-700 px-2 py-1 rounded text-xs">Bones</span>}
-                  </div>
-                </div>
-              )}
-
-              {/* Special Instructions */}
-              {order.cut_sheet.special_instructions && (
-                <div>
-                  <h4 className="font-medium text-sm text-gray-700 mb-2">Special Instructions</h4>
-                  <div className="bg-blue-50 border border-blue-200 rounded p-3 text-sm text-blue-800">
-                    {order.cut_sheet.special_instructions}
-                  </div>
-                </div>
-              )}
-            </div>
+            <CutSheetViewer
+              cutSheet={order.cut_sheet}
+              orderInfo={{
+                order_number: order.order_number,
+                producer_name: order.producer.name,
+                livestock_tag: order.livestock?.tag_number,
+                livestock_name: order.livestock?.name,
+              }}
+            />
           ) : (
             <div className="text-center py-4">
               <p className="text-gray-500 mb-4">No cut sheet created yet</p>
