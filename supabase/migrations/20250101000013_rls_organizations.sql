@@ -20,6 +20,6 @@ CREATE POLICY "Owners can update their organization"
 -- Allow authenticated users to create organizations (during onboarding)
 CREATE POLICY "Authenticated users can create organizations"
     ON organizations FOR INSERT
-    WITH CHECK (is_authenticated());
+    WITH CHECK (auth.uid() IS NOT NULL);
 
 -- Note: DELETE is not allowed through RLS - use admin/service role
