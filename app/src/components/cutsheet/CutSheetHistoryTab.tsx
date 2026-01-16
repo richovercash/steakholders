@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -20,7 +20,7 @@ import {
 } from 'lucide-react'
 import type { CutSheetHistoryEntry, CutSheetChangeCategory } from '@/types/database'
 import { getCutSheetHistory } from '@/lib/actions/cut-sheet-history'
-import { generateDiffFromEntry, type ChangeDiff } from '@/lib/actions/cut-sheet-history'
+import { generateDiffFromEntry, type ChangeDiff } from '@/lib/utils/cut-sheet-diff'
 
 // ============================================
 // Types

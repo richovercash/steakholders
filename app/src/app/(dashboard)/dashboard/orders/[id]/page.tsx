@@ -53,7 +53,7 @@ interface CutSheetData {
   processor_notes: string | null
   processor_modifications: Record<string, { thickness?: string; pieces_per_package?: number; notes?: string }>
   removed_cuts: { cut_id: string; cut_name: string; reason: string; removed_at: string }[]
-  added_cuts: { cut_id: string; cut_name: string; params: Record<string, unknown>; added_at: string }[]
+  added_cuts: { cut_id: string; cut_name: string; params: { thickness?: string; pieces_per_package?: number; notes?: string; [key: string]: string | number | undefined }; added_at: string }[]
   cut_sheet_items: CutSheetItem[]
   cut_sheet_sausages: CutSheetSausage[]
   produced_packages?: { id: string; cut_id: string; cut_name: string; package_number: number; actual_weight_lbs: number | null }[]

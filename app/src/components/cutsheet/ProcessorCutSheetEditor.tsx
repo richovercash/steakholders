@@ -36,20 +36,12 @@ import {
   Check,
 } from 'lucide-react'
 import { GoatIcon } from '@/components/icons/AnimalIcons'
-import type {
-  AnimalType,
-  CutSheetItem,
-  ProducedPackage,
-  ProcessorCutModification,
-  RemovedCut,
-  AddedCut,
-} from '@/types/database'
+import type { AnimalType } from '@/types/database'
 import { CUT_SHEET_SCHEMA } from '@/lib/cut-sheet-schema'
 import {
   updateCutParameters,
   removeCut,
   restoreCut,
-  addCut,
   updateProcessorNotes,
   updateHangingWeight,
   createProducedPackage,
@@ -58,7 +50,56 @@ import {
 } from '@/lib/actions/processor-cut-sheet'
 
 // ============================================
-// Types
+// Local Type Definitions
+// ============================================
+// These match the data shape passed from the order page
+
+interface CutSheetItem {
+  id: string
+  cut_id: string
+  cut_name: string
+  cut_category: string
+  thickness: string | null
+  weight_lbs: number | null
+  pieces_per_package: number | null
+  notes: string | null
+}
+
+interface ProducedPackage {
+  id: string
+  cut_id: string
+  cut_name: string
+  package_number: number
+  actual_weight_lbs: number | null
+}
+
+interface ProcessorCutModification {
+  thickness?: string
+  pieces_per_package?: number
+  notes?: string
+}
+
+interface RemovedCut {
+  cut_id: string
+  cut_name: string
+  reason: string
+  removed_at: string
+}
+
+interface AddedCut {
+  cut_id: string
+  cut_name: string
+  params: {
+    thickness?: string
+    pieces_per_package?: number
+    notes?: string
+    [key: string]: string | number | undefined
+  }
+  added_at: string
+}
+
+// ============================================
+// Component Types
 // ============================================
 
 interface CutSheetData {
@@ -168,28 +209,6 @@ function getCutDisplayName(cutId: string, animalType: AnimalType): string {
   }
 
   return cutId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
-}
-
-function getAvailableCutsForPrimal(primalId: string, animalType: AnimalType) {
-  const schema = CUT_SHEET_SCHEMA.animals[animalType]
-  const primal = schema.primals[primalId]
-  if (!primal) return []
-
-  const cuts: { id: string; name: string }[] = []
-
-  for (const cut of primal.choices) {
-    cuts.push({ id: cut.id, name: cut.name })
-  }
-
-  if (primal.subSections) {
-    for (const sub of Object.values(primal.subSections)) {
-      for (const cut of sub.choices) {
-        cuts.push({ id: cut.id, name: cut.name })
-      }
-    }
-  }
-
-  return cuts
 }
 
 // ============================================
@@ -805,7 +824,7 @@ export function ProcessorCutSheetEditor({
                   <div className="font-medium">{added.cut_name}</div>
                   <div className="text-sm text-gray-600">
                     {added.params.thickness && `Thickness: ${added.params.thickness}`}
-                    {added.notes && ` • ${added.notes}`}
+                    {added.params.notes && ` • ${added.params.notes}`}
                   </div>
                 </div>
               ))}
