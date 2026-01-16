@@ -56,7 +56,7 @@ async function redirectBasedOnUser(
       .from('users')
       .select('organization_id')
       .eq('auth_id', user.id)
-      .single()
+      .single() as { data: { organization_id: string | null } | null }
 
     // If user already has an org, go to dashboard
     if (userData?.organization_id) {

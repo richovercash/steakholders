@@ -2,13 +2,13 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Beef, Utensils } from 'lucide-react'
 import type { OrganizationType } from '@/types/database'
+import { completeOnboarding } from '@/lib/actions/onboarding'
 
 export default function OnboardingPage() {
   const [step, setStep] = useState<'type' | 'details'>('type')
@@ -16,7 +16,6 @@ export default function OnboardingPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
-  const supabase = createClient()
 
   // Form fields
   const [orgName, setOrgName] = useState('')
@@ -43,54 +42,23 @@ export default function OnboardingPage() {
     setError(null)
 
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        setError('Not authenticated')
-        return
-      }
-
-      // Create organization
-      const orgData: Record<string, unknown> = {
+      const result = await completeOnboarding({
+        type: orgType!,
         name: orgName,
-        type: orgType,
         email,
         phone,
         city,
         state,
         zip,
-      }
+        farm_name: orgType === 'producer' ? farmName : undefined,
+        license_number: orgType === 'processor' ? licenseNumber : undefined,
+        license_type: orgType === 'processor' ? licenseType : undefined,
+        capacity_per_week: orgType === 'processor' && capacityPerWeek ? parseInt(capacityPerWeek) : undefined,
+        services_offered: orgType === 'processor' ? ['beef', 'pork'] : undefined,
+      })
 
-      if (orgType === 'producer') {
-        orgData.farm_name = farmName
-      } else {
-        orgData.license_number = licenseNumber
-        orgData.license_type = licenseType
-        orgData.capacity_per_week = capacityPerWeek ? parseInt(capacityPerWeek) : null
-        orgData.services_offered = ['beef', 'pork'] // Default services
-      }
-
-      const { data: org, error: orgError } = await supabase
-        .from('organizations')
-        .insert(orgData as never)
-        .select()
-        .single() as { data: { id: string } | null; error: Error | null }
-
-      if (orgError) {
-        setError(orgError.message)
-        return
-      }
-
-      // Link user to organization as owner
-      const { error: userError } = await supabase
-        .from('users')
-        .update({
-          organization_id: org!.id,
-          role: 'owner',
-        } as never)
-        .eq('auth_id', user.id)
-
-      if (userError) {
-        setError(userError.message)
+      if (!result.success) {
+        setError(result.error || 'Failed to complete onboarding')
         return
       }
 
