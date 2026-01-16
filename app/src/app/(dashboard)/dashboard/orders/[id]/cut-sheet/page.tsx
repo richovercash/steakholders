@@ -12,7 +12,7 @@ import {
   loadTemplate
 } from '@/lib/actions/cut-sheet-templates'
 import { getProcessorCutConfigById } from '@/lib/actions/processor-cut-config'
-import type { AnimalType, CutSheetItem, CutSheetSausage, ProcessorCutConfig } from '@/types/database'
+import type { AnimalType, CutSheetItem, CutSheetSausage, ProcessorCutConfig, GroundType, PattySize, SausageFlavor } from '@/types/database'
 
 interface OrderInfo {
   id: string
@@ -24,6 +24,32 @@ interface OrderInfo {
   } | null
 }
 
+interface ExistingCutSheet {
+  id: string
+  animal_type: AnimalType
+  hanging_weight_lbs: number | null
+  ground_type: GroundType | null
+  ground_package_weight_lbs: number | null
+  patty_size: PattySize | null
+  keep_liver: boolean
+  keep_heart: boolean
+  keep_tongue: boolean
+  keep_kidneys: boolean
+  keep_oxtail: boolean
+  keep_bones: boolean
+  special_instructions: string | null
+  cut_sheet_items: {
+    cut_id: string
+    thickness: string | null
+    weight_lbs: number | null
+    pieces_per_package: number | null
+  }[]
+  cut_sheet_sausages: {
+    flavor: SausageFlavor
+    pounds: number
+  }[]
+}
+
 interface PageProps {
   params: { id: string }
 }
@@ -31,6 +57,7 @@ interface PageProps {
 export default function OrderCutSheetPage({ params }: PageProps) {
   const orderId = params.id
   const [order, setOrder] = useState<OrderInfo | null>(null)
+  const [existingCutSheet, setExistingCutSheet] = useState<ExistingCutSheet | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [organizationId, setOrganizationId] = useState<string | null>(null)
@@ -89,6 +116,41 @@ export default function OrderCutSheetPage({ params }: PageProps) {
         setProcessorConfig(config)
       }
 
+      // Load existing cut sheet if one exists
+      const { data: existingData } = await supabase
+        .from('cut_sheets')
+        .select(`
+          id,
+          animal_type,
+          hanging_weight_lbs,
+          ground_type,
+          ground_package_weight_lbs,
+          patty_size,
+          keep_liver,
+          keep_heart,
+          keep_tongue,
+          keep_kidneys,
+          keep_oxtail,
+          keep_bones,
+          special_instructions,
+          cut_sheet_items (
+            cut_id,
+            thickness,
+            weight_lbs,
+            pieces_per_package
+          ),
+          cut_sheet_sausages (
+            flavor,
+            pounds
+          )
+        `)
+        .eq('processing_order_id', orderId)
+        .single() as { data: ExistingCutSheet | null }
+
+      if (existingData) {
+        setExistingCutSheet(existingData)
+      }
+
       // Load templates
       const loadedTemplates = await getTemplatesForOrganization()
       setTemplates(loadedTemplates)
@@ -103,41 +165,85 @@ export default function OrderCutSheetPage({ params }: PageProps) {
     if (!organizationId || !order) return
 
     try {
-      // Create the cut sheet with the new primal-based format
-      const cutSheetData = {
-        processing_order_id: order.id,
-        producer_id: organizationId,
-        animal_type: state.animalType,
-        is_template: false,
-        hanging_weight_lbs: state.hangingWeight,
-        ground_type: state.groundType,
-        ground_package_weight_lbs: state.groundPackageWeight,
-        patty_size: state.pattySize,
-        keep_liver: state.organs.liver,
-        keep_heart: state.organs.heart,
-        keep_tongue: state.organs.tongue,
-        keep_kidneys: state.organs.kidneys,
-        keep_oxtail: state.organs.oxtail,
-        keep_bones: state.organs.bones,
-        special_instructions: state.specialInstructions || null,
-        status: 'draft',
-      }
+      let cutSheetId: string
 
-      const { data: cutSheet, error: cutSheetError } = await supabase
-        .from('cut_sheets')
-        .insert(cutSheetData as never)
-        .select('id')
-        .single() as { data: { id: string } | null; error: Error | null }
+      // If existing cut sheet, delete old items and update
+      if (existingCutSheet) {
+        // Delete old items and sausages first
+        await supabase
+          .from('cut_sheet_items')
+          .delete()
+          .eq('cut_sheet_id', existingCutSheet.id)
 
-      if (cutSheetError || !cutSheet) {
-        throw new Error(cutSheetError?.message || 'Failed to create cut sheet')
+        await supabase
+          .from('cut_sheet_sausages')
+          .delete()
+          .eq('cut_sheet_id', existingCutSheet.id)
+
+        // Update the cut sheet
+        const { error: updateError } = await supabase
+          .from('cut_sheets')
+          .update({
+            animal_type: state.animalType,
+            hanging_weight_lbs: state.hangingWeight,
+            ground_type: state.groundType,
+            ground_package_weight_lbs: state.groundPackageWeight,
+            patty_size: state.pattySize,
+            keep_liver: state.organs.liver,
+            keep_heart: state.organs.heart,
+            keep_tongue: state.organs.tongue,
+            keep_kidneys: state.organs.kidneys,
+            keep_oxtail: state.organs.oxtail,
+            keep_bones: state.organs.bones,
+            special_instructions: state.specialInstructions || null,
+            updated_at: new Date().toISOString(),
+          } as never)
+          .eq('id', existingCutSheet.id)
+
+        if (updateError) {
+          throw new Error(updateError.message || 'Failed to update cut sheet')
+        }
+
+        cutSheetId = existingCutSheet.id
+      } else {
+        // Create new cut sheet
+        const cutSheetData = {
+          processing_order_id: order.id,
+          producer_id: organizationId,
+          animal_type: state.animalType,
+          is_template: false,
+          hanging_weight_lbs: state.hangingWeight,
+          ground_type: state.groundType,
+          ground_package_weight_lbs: state.groundPackageWeight,
+          patty_size: state.pattySize,
+          keep_liver: state.organs.liver,
+          keep_heart: state.organs.heart,
+          keep_tongue: state.organs.tongue,
+          keep_kidneys: state.organs.kidneys,
+          keep_oxtail: state.organs.oxtail,
+          keep_bones: state.organs.bones,
+          special_instructions: state.specialInstructions || null,
+          status: 'draft',
+        }
+
+        const { data: cutSheet, error: cutSheetError } = await supabase
+          .from('cut_sheets')
+          .insert(cutSheetData as never)
+          .select('id')
+          .single() as { data: { id: string } | null; error: Error | null }
+
+        if (cutSheetError || !cutSheet) {
+          throw new Error(cutSheetError?.message || 'Failed to create cut sheet')
+        }
+
+        cutSheetId = cutSheet.id
       }
 
       // Insert cut sheet items from the new primal-based selections
       const cutItems: Omit<CutSheetItem, 'id' | 'created_at' | 'updated_at'>[] = state.selectedCuts.map((selection, index) => {
         const params = state.cutParameters[selection.cutId] || {}
         return {
-          cut_sheet_id: cutSheet.id,
+          cut_sheet_id: cutSheetId,
           cut_category: 'other' as const, // Primal cuts stored with 'other' category for now
           cut_id: selection.cutId,
           cut_name: selection.cutId, // Will be looked up from schema later
@@ -163,7 +269,7 @@ export default function OrderCutSheetPage({ params }: PageProps) {
       // Insert sausages (pork only)
       if (state.animalType === 'pork' && state.sausages.length > 0) {
         const sausageItems: Omit<CutSheetSausage, 'id' | 'created_at'>[] = state.sausages.map(s => ({
-          cut_sheet_id: cutSheet.id,
+          cut_sheet_id: cutSheetId,
           flavor: s.flavor,
           pounds: s.pounds,
         }))
@@ -250,6 +356,38 @@ export default function OrderCutSheetPage({ params }: PageProps) {
 
       <PrimalCutSheetBuilder
         initialAnimalType={order.livestock?.animal_type || 'beef'}
+        initialState={existingCutSheet ? {
+          animalType: existingCutSheet.animal_type,
+          hangingWeight: existingCutSheet.hanging_weight_lbs,
+          selectedCuts: existingCutSheet.cut_sheet_items.map(item => ({
+            primalId: '', // Will be resolved by the builder
+            cutId: item.cut_id,
+          })),
+          cutParameters: existingCutSheet.cut_sheet_items.reduce((acc, item) => {
+            acc[item.cut_id] = {
+              thickness: item.thickness || undefined,
+              weightLbs: item.weight_lbs || undefined,
+              piecesPerPackage: item.pieces_per_package || undefined,
+            }
+            return acc
+          }, {} as Record<string, Record<string, unknown>>),
+          groundType: existingCutSheet.ground_type || 'bulk',
+          groundPackageWeight: existingCutSheet.ground_package_weight_lbs || 1,
+          pattySize: existingCutSheet.patty_size || null,
+          sausages: existingCutSheet.cut_sheet_sausages.map(s => ({
+            flavor: s.flavor,
+            pounds: s.pounds,
+          })),
+          organs: {
+            liver: existingCutSheet.keep_liver,
+            heart: existingCutSheet.keep_heart,
+            tongue: existingCutSheet.keep_tongue,
+            kidneys: existingCutSheet.keep_kidneys,
+            oxtail: existingCutSheet.keep_oxtail,
+            bones: existingCutSheet.keep_bones,
+          },
+          specialInstructions: existingCutSheet.special_instructions || '',
+        } : undefined}
         templates={templates}
         processorConfig={processorConfig}
         onSave={handleSave}
