@@ -736,3 +736,122 @@ export interface CutSheetWithItems extends CutSheet {
 export interface NotificationWithRelations extends Notification {
   processing_order?: ProcessingOrder | null
 }
+
+// ============================================
+// Chain of Custody & Processor Edit Types
+// ============================================
+
+// Livestock with tracking ID
+export interface LivestockWithTracking extends Livestock {
+  tracking_id: string | null
+}
+
+// Change category for cut sheet history
+export type CutSheetChangeCategory =
+  | 'initial_creation'
+  | 'cut_added'
+  | 'cut_removed'
+  | 'cut_modified'
+  | 'weight_entered'
+  | 'package_created'
+  | 'notes_updated'
+  | 'general'
+
+// Cut sheet history entry
+export interface CutSheetHistoryEntry {
+  id: string
+  cut_sheet_id: string
+  processing_order_id: string | null
+  changed_by_user_id: string | null
+  changed_by_org_id: string | null
+  changed_by_role: 'producer' | 'processor'
+  change_type: 'created' | 'updated' | 'status_changed'
+  change_category: CutSheetChangeCategory | null
+  change_summary: string | null
+  previous_state: Json | null
+  new_state: Json | null
+  changed_fields: string[] | null
+  affected_cut_id: string | null
+  affected_package_id: string | null
+  created_at: string
+}
+
+// Produced package (actual cut produced with weight)
+export interface ProducedPackage {
+  id: string
+  created_at: string
+  updated_at: string
+  cut_sheet_id: string
+  processor_added: boolean
+  cut_id: string
+  cut_name: string
+  primal_id: string | null
+  package_number: number
+  quantity_in_package: number
+  actual_weight_lbs: number | null
+  thickness: string | null
+  processing_style: string | null
+  label_printed: boolean
+  label_printed_at: string | null
+  livestock_tracking_id: string | null
+  processor_notes: string | null
+  metadata: Json
+}
+
+// Processor modification to a cut
+export interface ProcessorCutModification {
+  thickness?: string
+  pieces_per_package?: number
+  notes?: string
+  modified_at?: string
+}
+
+// Removed cut record
+export interface RemovedCut {
+  cut_id: string
+  cut_name: string
+  reason: string
+  removed_at: string
+}
+
+// Added cut record (by processor)
+export interface AddedCut {
+  cut_id: string
+  cut_name: string
+  primal_id?: string
+  params: {
+    thickness?: string
+    pieces_per_package?: number
+    weight_lbs?: number
+  }
+  notes?: string
+  added_at: string
+}
+
+// Extended cut sheet with processor fields
+export interface CutSheetWithProcessorFields extends CutSheet {
+  processor_modifications: Record<string, ProcessorCutModification>
+  removed_cuts: RemovedCut[]
+  added_cuts: AddedCut[]
+  processor_notes: string | null
+  last_modified_by_role: 'producer' | 'processor' | null
+  last_modified_by_user_id: string | null
+  hanging_weight_lbs: number | null
+  final_weight_lbs: number | null
+}
+
+// Cut sheet with items, sausages, and packages
+export interface CutSheetComplete extends CutSheetWithProcessorFields {
+  items: CutSheetItem[]
+  sausages: CutSheetSausage[]
+  produced_packages: ProducedPackage[]
+}
+
+// Order with full details for processor view
+export interface ProcessingOrderWithDetails extends ProcessingOrder {
+  producer: Organization
+  processor: Organization
+  livestock: LivestockWithTracking | null
+  calendar_slot: CalendarSlot | null
+  cut_sheet: CutSheetComplete | null
+}

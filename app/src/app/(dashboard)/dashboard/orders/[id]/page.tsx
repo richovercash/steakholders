@@ -9,8 +9,11 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { ArrowLeft, FileText, Calendar, Truck, Package, CheckCircle, Edit2, Save, X } from 'lucide-react'
+import { ArrowLeft, FileText, Calendar, Truck, Package, CheckCircle, Edit2, Save, X, History, ClipboardList } from 'lucide-react'
 import { CutSheetViewer } from '@/components/cutsheet/CutSheetViewer'
+import { ProcessorCutSheetEditor } from '@/components/cutsheet/ProcessorCutSheetEditor'
+import { CutSheetHistoryTab } from '@/components/cutsheet/CutSheetHistoryTab'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { notifyOrderStatusChange, notifyProcessingStageChange } from '@/lib/notifications/actions'
 import { notifyNextInWaitlist } from '@/lib/actions/waitlist'
 import type { AnimalType, OrderStatus, ProcessingStage, OrganizationType } from '@/types/database'
@@ -47,8 +50,13 @@ interface CutSheetData {
   keep_oxtail: boolean
   keep_bones: boolean
   special_instructions: string | null
+  processor_notes: string | null
+  processor_modifications: Record<string, { thickness?: string; pieces_per_package?: number; notes?: string }>
+  removed_cuts: { cut_id: string; cut_name: string; reason: string; removed_at: string }[]
+  added_cuts: { cut_id: string; cut_name: string; params: Record<string, unknown>; added_at: string }[]
   cut_sheet_items: CutSheetItem[]
   cut_sheet_sausages: CutSheetSausage[]
+  produced_packages?: { id: string; cut_id: string; cut_name: string; package_number: number; actual_weight_lbs: number | null }[]
 }
 
 interface OrderWithRelations {
@@ -73,6 +81,7 @@ interface OrderWithRelations {
     tag_number: string | null
     name: string | null
     breed: string | null
+    tracking_id: string | null
   } | null
   processor: {
     id: string
@@ -173,7 +182,8 @@ export default function OrderDetailPage({ params }: PageProps) {
           animal_type,
           tag_number,
           name,
-          breed
+          breed,
+          tracking_id
         ),
         processor:processor_id (
           id,
@@ -207,7 +217,7 @@ export default function OrderDetailPage({ params }: PageProps) {
       return
     }
 
-    // Check for cut sheet with full data including items and sausages
+    // Check for cut sheet with full data including items, sausages, and processor fields
     const { data: cutSheetData } = await supabase
       .from('cut_sheets')
       .select(`
@@ -225,6 +235,10 @@ export default function OrderDetailPage({ params }: PageProps) {
         keep_oxtail,
         keep_bones,
         special_instructions,
+        processor_notes,
+        processor_modifications,
+        removed_cuts,
+        added_cuts,
         cut_sheet_items (
           id,
           cut_id,
@@ -244,9 +258,28 @@ export default function OrderDetailPage({ params }: PageProps) {
       .eq('processing_order_id', orderId)
       .single() as { data: CutSheetData | null }
 
+    // Fetch produced packages if cut sheet exists
+    let producedPackages: CutSheetData['produced_packages'] = []
+    if (cutSheetData?.id) {
+      const { data: pkgData } = await supabase
+        .from('produced_packages')
+        .select('id, cut_id, cut_name, package_number, actual_weight_lbs')
+        .eq('cut_sheet_id', cutSheetData.id)
+        .order('cut_id')
+        .order('package_number') as { data: typeof producedPackages }
+      producedPackages = pkgData || []
+    }
+
     const fullOrder = {
       ...orderData,
-      cut_sheet: cutSheetData,
+      cut_sheet: cutSheetData ? {
+        ...cutSheetData,
+        produced_packages: producedPackages,
+        // Ensure these have defaults if null
+        processor_modifications: cutSheetData.processor_modifications || {},
+        removed_cuts: cutSheetData.removed_cuts || [],
+        added_cuts: cutSheetData.added_cuts || [],
+      } : null,
     }
 
     setOrder(fullOrder)
@@ -824,7 +857,7 @@ export default function OrderDetailPage({ params }: PageProps) {
         </CardContent>
       </Card>
 
-      {/* Cut Sheet */}
+      {/* Cut Sheet with Tabs */}
       <Card className="mb-6" id="cut-sheet-print-area">
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -834,7 +867,7 @@ export default function OrderDetailPage({ params }: PageProps) {
                 Cut Sheet
               </CardTitle>
               <CardDescription>
-                {isProcessor ? 'Producer cutting instructions' : 'Specify how you want your meat cut and packaged'}
+                {isProcessor ? 'View and edit cutting instructions' : 'Specify how you want your meat cut and packaged'}
               </CardDescription>
             </div>
             {order.cut_sheet && !isProcessor && (
@@ -848,15 +881,57 @@ export default function OrderDetailPage({ params }: PageProps) {
         </CardHeader>
         <CardContent>
           {order.cut_sheet ? (
-            <CutSheetViewer
-              cutSheet={order.cut_sheet}
-              orderInfo={{
-                order_number: order.order_number,
-                producer_name: order.producer.name,
-                livestock_tag: order.livestock?.tag_number,
-                livestock_name: order.livestock?.name,
-              }}
-            />
+            <Tabs defaultValue={isProcessor ? 'editor' : 'view'} className="w-full">
+              <TabsList className="grid w-full grid-cols-3 mb-4">
+                <TabsTrigger value={isProcessor ? 'editor' : 'view'} className="flex items-center gap-2">
+                  <ClipboardList className="h-4 w-4" />
+                  {isProcessor ? 'Editor' : 'Cut Sheet'}
+                </TabsTrigger>
+                <TabsTrigger value="view" className={isProcessor ? '' : 'hidden'}>
+                  <FileText className="h-4 w-4 mr-1" />
+                  Read-Only View
+                </TabsTrigger>
+                <TabsTrigger value="history" className="flex items-center gap-2">
+                  <History className="h-4 w-4" />
+                  History
+                </TabsTrigger>
+              </TabsList>
+
+              {/* Editor Tab (Processor Only) */}
+              {isProcessor && (
+                <TabsContent value="editor">
+                  <ProcessorCutSheetEditor
+                    cutSheet={order.cut_sheet}
+                    orderInfo={{
+                      order_number: order.order_number,
+                      producer_name: order.producer.name,
+                      livestock_tag: order.livestock?.tag_number,
+                      livestock_name: order.livestock?.name,
+                      livestock_tracking_id: order.livestock?.tracking_id,
+                    }}
+                    onUpdate={loadOrder}
+                  />
+                </TabsContent>
+              )}
+
+              {/* Read-Only View Tab */}
+              <TabsContent value="view">
+                <CutSheetViewer
+                  cutSheet={order.cut_sheet}
+                  orderInfo={{
+                    order_number: order.order_number,
+                    producer_name: order.producer.name,
+                    livestock_tag: order.livestock?.tag_number,
+                    livestock_name: order.livestock?.name,
+                  }}
+                />
+              </TabsContent>
+
+              {/* History Tab */}
+              <TabsContent value="history">
+                <CutSheetHistoryTab cutSheetId={order.cut_sheet.id} />
+              </TabsContent>
+            </Tabs>
           ) : (
             <div className="text-center py-4">
               <p className="text-gray-500 mb-4">No cut sheet created yet</p>
