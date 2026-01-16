@@ -47,6 +47,5 @@ Thumbs.db
 *.pem
 *.zip
 
-# Claude/Decibel local config
+# Claude local config
 .claude/
-.decibel/

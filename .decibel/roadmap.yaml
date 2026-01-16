@@ -1,0 +1,178 @@
+# Steakholders Roadmap
+# Development phases and feature timeline
+
+current_phase: 3
+last_updated: 2026-01-16
+
+phases:
+  # ============================================
+  # PHASE 1: FOUNDATION (COMPLETE)
+  # ============================================
+  phase_1:
+    name: Foundation
+    status: complete
+    completion_date: 2025-12-23
+    features:
+      - title: Authentication & user signup
+        status: complete
+        notes: Supabase Auth with email/password
+
+      - title: Organization creation flow
+        status: complete
+        notes: Server action bypasses RLS issues
+
+      - title: Producer/processor profile setup
+        status: complete
+
+      - title: Discovery dashboard
+        status: complete
+        notes: Geo-based processor search
+
+  # ============================================
+  # PHASE 2: CORE WORKFLOW (COMPLETE)
+  # ============================================
+  phase_2:
+    name: Core Workflow
+    status: complete
+    completion_date: 2026-01-14
+    features:
+      - title: Livestock management (add/edit animals)
+        status: complete
+        notes: Full CRUD with tracking IDs
+
+      - title: Calendar & scheduling system
+        status: complete
+        notes: Slot management and booking
+
+      - title: Processing order creation
+        status: complete
+        notes: Full order workflow
+
+      - title: Waitlist management
+        status: complete
+
+  # ============================================
+  # PHASE 3: CUT SHEETS & TRACKING (IN PROGRESS)
+  # ============================================
+  phase_3:
+    name: Cut Sheets & Tracking
+    status: in_progress
+    started_date: 2026-01-15
+    features:
+      - title: Visual cut sheet builder (primal-based)
+        status: complete
+        completion_date: 2026-01-15
+        notes: Organized by primal cuts, full customization
+
+      - title: Processor cut sheet editor
+        status: in_progress
+        notes: |
+          Edit cuts, enter weights, track packages.
+          Code complete, testing blocked by email issues.
+        blockers:
+          - Email confirmation not sending
+
+      - title: Chain of custody tracking
+        status: complete
+        completion_date: 2026-01-16
+        notes: |
+          Livestock tracking IDs (STK-YYYY-NNNNN)
+          Package traceability to original animal
+
+      - title: Cut sheet history & versioning
+        status: complete
+        completion_date: 2026-01-16
+        notes: Full edit history with diffs
+
+      - title: Order progress tracking
+        status: complete
+        notes: Processing stages (received → ready)
+
+      - title: Email notifications
+        status: blocked
+        blockers:
+          - Supabase SMTP not working with Resend
+
+  # ============================================
+  # PHASE 4: COMMUNICATION & POLISH (COMPLETE)
+  # ============================================
+  phase_4:
+    name: Communication & Polish
+    status: complete
+    completion_date: 2026-01-12
+    features:
+      - title: Messaging system
+        status: complete
+        notes: Real-time org-to-org messaging
+
+      - title: In-app notifications
+        status: complete
+
+      - title: Mobile optimization
+        status: partial
+        notes: Responsive design, PWA pending
+
+      - title: Basic reporting
+        status: not_started
+
+  # ============================================
+  # PHASE 5: E-COMMERCE (PLANNED)
+  # ============================================
+  phase_5:
+    name: E-Commerce
+    status: planned
+    features:
+      - title: Package inventory management
+        status: planned
+        notes: From produced_packages table
+        dependencies:
+          - Processor cut sheet editor complete
+
+      - title: Customer-facing storefront
+        status: planned
+
+      - title: Shopping cart & checkout
+        status: planned
+
+      - title: Payment processing
+        status: planned
+        notes: Stripe integration likely
+
+      - title: Order fulfillment tracking
+        status: planned
+
+  # ============================================
+  # PHASE 6: SCALE & OPTIMIZE (FUTURE)
+  # ============================================
+  phase_6:
+    name: Scale & Optimize
+    status: future
+    features:
+      - title: Advanced analytics & reporting
+        status: future
+
+      - title: Multi-location support
+        status: future
+
+      - title: API for third-party integrations
+        status: future
+
+      - title: Mobile app (React Native)
+        status: future
+
+# ============================================
+# IMMEDIATE PRIORITIES
+# ============================================
+immediate_priorities:
+  - Fix Supabase SMTP / email confirmation (ISS-001)
+  - Complete processor cut sheet editor testing
+  - Deploy and verify production signup flow
+
+# ============================================
+# BLOCKING ISSUES
+# ============================================
+blockers:
+  - id: ISS-001
+    description: Email confirmation not sending
+    impact: Cannot test new user signup flow
+    workaround: Manual user creation in Supabase dashboard

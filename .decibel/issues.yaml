@@ -1,0 +1,156 @@
+# Steakholders Issues Tracker
+# Active bugs, tasks, and technical debt
+
+issues:
+  # ============================================
+  # CRITICAL / BLOCKERS
+  # ============================================
+
+  ISS-001:
+    title: Supabase SMTP not sending auth emails
+    severity: critical
+    status: investigating
+    created: 2026-01-16
+    epic: EP-009
+    description: |
+      Email confirmation emails not being sent via Supabase Auth.
+      Resend API works directly (curl test successful), but Supabase
+      SMTP integration doesn't appear to be calling Resend at all.
+    symptoms:
+      - No emails in Resend dashboard from Supabase
+      - Signup works but no confirmation email
+      - Was working yesterday, stopped today
+    attempted_fixes:
+      - Verified Resend API key works (curl test)
+      - Configured SMTP settings (smtp.resend.com:587)
+      - Using onboarding@resend.dev as sender
+    next_steps:
+      - Check Supabase Auth logs for errors
+      - Verify SMTP toggle is actually enabled
+      - Consider Supabase rate limiting on project level
+
+  ISS-002:
+    title: RLS policy blocks organization INSERT despite correct policy
+    severity: high
+    status: workaround_applied
+    created: 2026-01-16
+    epic: EP-001
+    description: |
+      Organizations table has correct INSERT policy (WITH CHECK true, TO authenticated)
+      but inserts from client still fail with RLS violation.
+    root_cause: Unknown - policy appears correct
+    workaround: |
+      Created server action (completeOnboarding) that uses admin client
+      with service role key to bypass RLS for organization creation.
+    files_affected:
+      - app/src/lib/actions/onboarding.ts
+      - app/src/app/onboarding/page.tsx
+    permanent_fix_needed: true
+
+  # ============================================
+  # HIGH PRIORITY
+  # ============================================
+
+  ISS-003:
+    title: Auth callback needed for email verification
+    severity: high
+    status: resolved
+    created: 2026-01-16
+    resolved: 2026-01-16
+    epic: EP-001
+    description: |
+      Email verification redirected to root URL which didn't handle
+      the token_hash parameter for session establishment.
+    fix: |
+      Created /auth/callback route that handles both token_hash (email)
+      and code (OAuth/PKCE) verification flows.
+    files_affected:
+      - app/src/app/auth/callback/route.ts
+
+  ISS-004:
+    title: User record not created on signup
+    severity: high
+    status: resolved
+    created: 2026-01-16
+    resolved: 2026-01-16
+    epic: EP-001
+    description: |
+      New signups created auth.users record but no public.users record,
+      causing onboarding update to fail silently.
+    fix: |
+      Created trigger on auth.users to automatically create public.users
+      record on signup with handle_new_user() function.
+    sql_applied: |
+      CREATE TRIGGER on_auth_user_created
+        AFTER INSERT ON auth.users
+        FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+  # ============================================
+  # MEDIUM PRIORITY
+  # ============================================
+
+  ISS-005:
+    title: Duplicate RLS policies on organizations table
+    severity: medium
+    status: resolved
+    created: 2026-01-16
+    resolved: 2026-01-16
+    description: |
+      Multiple INSERT policies existed on organizations table causing
+      potential conflicts.
+    fix: Dropped duplicates, created single clean policy
+
+  ISS-006:
+    title: Server action sync function in 'use server' file
+    severity: medium
+    status: resolved
+    created: 2026-01-16
+    resolved: 2026-01-16
+    epic: EP-009
+    description: |
+      generateDiffFromEntry was a sync function in cut-sheet-history.ts
+      which is marked 'use server'. Next.js requires all exports to be async.
+    fix: |
+      Moved diff generation utilities to separate file
+      app/src/lib/utils/cut-sheet-diff.ts
+    files_affected:
+      - app/src/lib/actions/cut-sheet-history.ts
+      - app/src/lib/utils/cut-sheet-diff.ts
+      - app/src/components/cutsheet/CutSheetHistoryTab.tsx
+
+  # ============================================
+  # LOW PRIORITY / TECH DEBT
+  # ============================================
+
+  ISS-007:
+    title: useMemo dependency warning in PrimalCutSheetBuilder
+    severity: low
+    status: open
+    created: 2026-01-16
+    description: |
+      React warning about selectedIds object construction making
+      useMemo dependencies change on every render.
+    file: app/src/components/cutsheet/PrimalCutSheetBuilder.tsx
+    line: 473
+
+  ISS-008:
+    title: Node.js 18 deprecation warnings from Supabase
+    severity: low
+    status: open
+    created: 2026-01-16
+    description: |
+      Build shows warnings about Node.js 18 deprecation.
+      Should upgrade to Node.js 20+.
+    message: "Node.js 18 and below are deprecated and will no longer be supported"
+
+  ISS-009:
+    title: Type assertions needed for Supabase queries
+    severity: low
+    status: open
+    description: |
+      Several places use `as never` or explicit type assertions for
+      Supabase query results due to generated types not matching runtime.
+    files_affected:
+      - app/src/app/onboarding/page.tsx
+      - app/src/app/auth/callback/route.ts
+      - Various other files

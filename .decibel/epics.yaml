@@ -1,0 +1,163 @@
+# Steakholders Epics
+# High-level feature groupings and their status
+
+epics:
+  # ============================================
+  # COMPLETED EPICS
+  # ============================================
+
+  EP-001:
+    name: Foundation & Authentication
+    status: completed
+    phase: 1
+    description: Core auth, user signup, organization creation
+    completed_date: 2025-12-23
+    features:
+      - Supabase Auth integration
+      - Email/password signup
+      - Organization creation (producer/processor)
+      - User-organization linking
+      - Protected routes & middleware
+
+  EP-002:
+    name: Processor Discovery
+    status: completed
+    phase: 1
+    description: Allow producers to find processors by location
+    completed_date: 2025-12-22
+    features:
+      - Geo-based processor search
+      - Processor profile cards
+      - Services & capacity display
+      - License type filtering
+
+  EP-003:
+    name: Livestock Management
+    status: completed
+    phase: 2
+    description: Track animals from farm through processing
+    completed_date: 2025-01-10
+    features:
+      - Add/edit livestock records
+      - Animal types (beef, pork, lamb, goat)
+      - Tag numbers and names
+      - Breed and notes tracking
+
+  EP-004:
+    name: Calendar & Scheduling
+    status: completed
+    phase: 2
+    description: Processor availability and booking system
+    completed_date: 2025-01-12
+    features:
+      - Processor calendar management
+      - Slot creation and availability
+      - Producer slot booking
+      - Waitlist system
+
+  EP-005:
+    name: Primal-Based Cut Sheet Builder
+    status: completed
+    phase: 3
+    description: Visual cut sheet creation organized by primal cuts
+    completed_date: 2026-01-15
+    features:
+      - Primal cut organization (chuck, rib, loin, etc.)
+      - Cut selection with thickness/quantity
+      - Ground beef and sausage configuration
+      - Organ meat preferences
+      - Special instructions
+
+  EP-006:
+    name: Processing Orders
+    status: completed
+    phase: 2
+    description: Order workflow connecting all entities
+    completed_date: 2026-01-14
+    features:
+      - Order creation flow
+      - Status tracking (draft → complete)
+      - Processing stages
+      - Producer and processor views
+
+  EP-007:
+    name: Messaging System
+    status: completed
+    phase: 4
+    description: Real-time communication
+    completed_date: 2026-01-10
+    features:
+      - Organization-to-organization messaging
+      - Real-time updates
+      - Message history
+      - Unread indicators
+
+  EP-008:
+    name: Notifications
+    status: completed
+    phase: 4
+    description: Email and in-app notifications
+    completed_date: 2026-01-12
+    features:
+      - Order status notifications
+      - Message notifications
+      - Email delivery via Resend
+      - Notification preferences
+
+  # ============================================
+  # IN PROGRESS EPICS
+  # ============================================
+
+  EP-009:
+    name: Processor Cut Sheet Editor
+    status: in_progress
+    phase: 3
+    description: Allow processors to edit cut sheets and enter weights
+    started_date: 2026-01-16
+    features:
+      - Edit cut parameters (thickness, pieces per package)
+      - Add/remove cuts from orders
+      - Enter actual weights for produced packages
+      - Chain of custody tracking (livestock tracking IDs)
+      - Full edit history with diffs
+    blockers:
+      - RLS policies blocking organization inserts (workaround: server action)
+      - Email confirmation not sending (investigating SMTP)
+
+  # ============================================
+  # PLANNED EPICS
+  # ============================================
+
+  EP-010:
+    name: Cut Sheet Viewer & Print
+    status: planned
+    phase: 3
+    description: Read-only view with print/export for processors
+    features:
+      - Print-optimized layout
+      - PDF export
+      - Customer-facing view
+
+  EP-011:
+    name: E-Commerce Integration
+    status: planned
+    phase: 5
+    description: Sell processed cuts online
+    features:
+      - Package inventory from cut sheets
+      - Shopping cart
+      - Payment processing
+      - Order fulfillment tracking
+    dependencies:
+      - EP-009 (chain of custody tracking)
+
+  EP-012:
+    name: Reporting & Analytics
+    status: planned
+    phase: 5
+    description: Business insights for producers and processors
+    features:
+      - Order history reports
+      - Yield tracking
+      - Revenue analytics
+      - Seasonal trends

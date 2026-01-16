@@ -1,0 +1,167 @@
+# Steakholders Project Manifest
+# AI-ingestible project definition for the Decibel ecosystem
+
+id: steakholders
+name: Steakholders
+description: B2B platform connecting livestock producers with meat processors
+version: 0.1.0
+status: development
+
+# Technology Stack
+stack:
+  frontend:
+    - Next.js 14+
+    - TypeScript
+    - Tailwind CSS
+    - shadcn/ui
+  backend:
+    - Supabase (PostgreSQL + Auth + Realtime)
+    - Vercel (hosting, edge functions)
+    - Resend (transactional email)
+
+# Domain Architecture
+domains:
+  auth:
+    name: Authentication & Authorization
+    status: protected
+    description: User authentication, session management, organization membership
+    paths:
+      - src/lib/auth/
+      - src/app/api/auth/
+      - supabase/auth/
+    protocols:
+      - auth_flow_v1
+
+  organizations:
+    name: Organizations
+    status: protected
+    description: Multi-tenant organization management (producers and processors)
+    paths:
+      - src/lib/organizations/
+      - src/app/(dashboard)/organization/
+    protocols:
+      - org_management_v1
+
+  livestock:
+    name: Livestock Management
+    status: normal
+    description: Animal tracking from farm through processing
+    paths:
+      - src/lib/livestock/
+      - src/app/(dashboard)/livestock/
+    protocols:
+      - livestock_tracking_v1
+
+  scheduling:
+    name: Calendar & Scheduling
+    status: protected
+    description: Processor availability, slot booking, waitlist management
+    paths:
+      - src/lib/calendar/
+      - src/app/(dashboard)/calendar/
+      - src/app/(dashboard)/schedule/
+    protocols:
+      - scheduling_v1
+
+  orders:
+    name: Processing Orders
+    status: protected
+    description: Core order workflow connecting producers, processors, and livestock
+    paths:
+      - src/lib/orders/
+      - src/app/(dashboard)/orders/
+    protocols:
+      - order_workflow_v1
+
+  cutsheets:
+    name: Cut Sheets
+    status: normal
+    description: Visual cut sheet builder and templates
+    paths:
+      - src/lib/cutsheets/
+      - src/app/(dashboard)/cutsheets/
+      - src/components/cutsheet/
+    protocols:
+      - cutsheet_builder_v1
+
+  messaging:
+    name: Messaging
+    status: normal
+    description: Real-time communication between producers and processors
+    paths:
+      - src/lib/messaging/
+      - src/app/(dashboard)/messages/
+    protocols:
+      - messaging_v1
+
+  notifications:
+    name: Notifications
+    status: normal
+    description: Email alerts and in-app notifications
+    paths:
+      - src/lib/notifications/
+      - src/app/api/notifications/
+    protocols:
+      - notifications_v1
+
+  discovery:
+    name: Discovery
+    status: normal
+    description: Geo-based processor discovery for producers
+    paths:
+      - src/lib/discovery/
+      - src/app/(dashboard)/discover/
+    protocols:
+      - discovery_v1
+
+# Development Phases
+phases:
+  phase_1:
+    name: Foundation
+    status: planned
+    features:
+      - Authentication & user signup
+      - Organization creation flow
+      - Producer/processor profile setup
+      - Discovery dashboard
+
+  phase_2:
+    name: Core Workflow
+    status: planned
+    features:
+      - Livestock management (add/edit animals)
+      - Calendar & scheduling system
+      - Processing order creation
+
+  phase_3:
+    name: Cut Sheets & Tracking
+    status: planned
+    features:
+      - Visual cut sheet builder
+      - Order progress tracking
+      - Email notifications
+
+  phase_4:
+    name: Communication & Polish
+    status: planned
+    features:
+      - Messaging system
+      - Mobile optimization (PWA)
+      - Basic reporting
+
+# External Integrations
+integrations:
+  supabase:
+    type: database
+    status: configured
+    url_env: NEXT_PUBLIC_SUPABASE_URL
+    key_env: NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  resend:
+    type: email
+    status: planned
+    key_env: RESEND_API_KEY
+
+  vercel:
+    type: hosting
+    status: configured

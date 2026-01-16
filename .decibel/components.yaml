@@ -1,0 +1,256 @@
+# Steakholders Components
+# System components with their lifecycle status
+
+components:
+  # Authentication Components
+  - id: auth-provider
+    name: Auth Provider
+    type: provider
+    domain: auth
+    status: planned
+    description: Supabase Auth integration with session management
+    entrypoints:
+      - src/lib/auth/provider.tsx
+    dependencies:
+      - supabase-client
+
+  - id: auth-middleware
+    name: Auth Middleware
+    type: middleware
+    domain: auth
+    status: planned
+    description: Route protection and session validation
+    entrypoints:
+      - src/middleware.ts
+    dependencies:
+      - auth-provider
+
+  # Core Services
+  - id: supabase-client
+    name: Supabase Client
+    type: service
+    domain: organizations
+    status: planned
+    description: Configured Supabase client with typed schema
+    entrypoints:
+      - src/lib/supabase/client.ts
+      - src/lib/supabase/server.ts
+    health_signals:
+      - connection_status
+      - query_latency
+
+  - id: org-service
+    name: Organization Service
+    type: service
+    domain: organizations
+    status: planned
+    description: Organization CRUD and membership management
+    entrypoints:
+      - src/lib/organizations/service.ts
+    dependencies:
+      - supabase-client
+      - auth-provider
+
+  - id: livestock-service
+    name: Livestock Service
+    type: service
+    domain: livestock
+    status: planned
+    description: Animal tracking and status management
+    entrypoints:
+      - src/lib/livestock/service.ts
+    dependencies:
+      - supabase-client
+      - org-service
+
+  - id: calendar-service
+    name: Calendar Service
+    type: service
+    domain: scheduling
+    status: planned
+    description: Processor availability and slot management
+    entrypoints:
+      - src/lib/calendar/service.ts
+    dependencies:
+      - supabase-client
+      - org-service
+
+  - id: order-service
+    name: Order Service
+    type: service
+    domain: orders
+    status: planned
+    description: Processing order lifecycle management
+    entrypoints:
+      - src/lib/orders/service.ts
+    dependencies:
+      - supabase-client
+      - livestock-service
+      - calendar-service
+
+  - id: cutsheet-service
+    name: Cut Sheet Service
+    type: service
+    domain: cutsheets
+    status: planned
+    description: Cut sheet creation, templates, and validation
+    entrypoints:
+      - src/lib/cutsheets/service.ts
+    dependencies:
+      - supabase-client
+      - order-service
+
+  - id: messaging-service
+    name: Messaging Service
+    type: service
+    domain: messaging
+    status: planned
+    description: Real-time messaging between organizations
+    entrypoints:
+      - src/lib/messaging/service.ts
+    dependencies:
+      - supabase-client
+      - org-service
+
+  - id: notification-service
+    name: Notification Service
+    type: service
+    domain: notifications
+    status: planned
+    description: Email and in-app notifications
+    entrypoints:
+      - src/lib/notifications/service.ts
+    dependencies:
+      - supabase-client
+      - resend-client
+
+  - id: resend-client
+    name: Resend Email Client
+    type: integration
+    domain: notifications
+    status: planned
+    description: Transactional email via Resend API
+    entrypoints:
+      - src/lib/email/resend.ts
+    health_signals:
+      - email_delivery_rate
+
+  - id: discovery-service
+    name: Discovery Service
+    type: service
+    domain: discovery
+    status: planned
+    description: Geo-based processor search and filtering
+    entrypoints:
+      - src/lib/discovery/service.ts
+    dependencies:
+      - supabase-client
+
+  # UI Components
+  - id: dashboard-layout
+    name: Dashboard Layout
+    type: ui
+    domain: organizations
+    status: planned
+    description: Main authenticated layout with navigation
+    entrypoints:
+      - src/app/(dashboard)/layout.tsx
+    dependencies:
+      - auth-provider
+
+  - id: cutsheet-builder
+    name: Cut Sheet Builder
+    type: ui
+    domain: cutsheets
+    status: planned
+    description: Visual interactive cut sheet editor
+    entrypoints:
+      - src/components/cutsheet/Builder.tsx
+      - src/components/cutsheet/AnimalDiagram.tsx
+    dependencies:
+      - cutsheet-service
+
+  - id: calendar-view
+    name: Calendar View
+    type: ui
+    domain: scheduling
+    status: planned
+    description: Processor availability calendar with booking
+    entrypoints:
+      - src/components/calendar/CalendarView.tsx
+      - src/components/calendar/SlotPicker.tsx
+    dependencies:
+      - calendar-service
+
+  - id: order-tracker
+    name: Order Tracker
+    type: ui
+    domain: orders
+    status: planned
+    description: Processing stage progress visualization
+    entrypoints:
+      - src/components/orders/OrderTracker.tsx
+      - src/components/orders/StageProgress.tsx
+    dependencies:
+      - order-service
+
+  - id: message-thread
+    name: Message Thread
+    type: ui
+    domain: messaging
+    status: planned
+    description: Real-time message thread component
+    entrypoints:
+      - src/components/messaging/Thread.tsx
+      - src/components/messaging/MessageInput.tsx
+    dependencies:
+      - messaging-service
+
+  # API Routes
+  - id: auth-api
+    name: Auth API Routes
+    type: api
+    domain: auth
+    status: planned
+    description: Authentication endpoints
+    entrypoints:
+      - src/app/api/auth/[...supabase]/route.ts
+    dependencies:
+      - supabase-client
+
+  - id: orders-api
+    name: Orders API Routes
+    type: api
+    domain: orders
+    status: planned
+    description: Order management endpoints
+    entrypoints:
+      - src/app/api/orders/route.ts
+      - src/app/api/orders/[id]/route.ts
+    dependencies:
+      - order-service
+      - auth-middleware
+
+  - id: notifications-api
+    name: Notifications API Routes
+    type: api
+    domain: notifications
+    status: planned
+    description: Notification trigger endpoints
+    entrypoints:
+      - src/app/api/notifications/route.ts
+    dependencies:
+      - notification-service
+      - auth-middleware
+
+  # Database
+  - id: supabase-schema
+    name: Supabase Schema
+    type: database
+    domain: organizations
+    status: wired
+    description: PostgreSQL schema with RLS policies
+    entrypoints:
+      - supabase-schema.sql
+    health_signals:
+      - migration_status

@@ -1,0 +1,139 @@
+# Steakholders Invariants
+# Hard rules that must NEVER be violated
+
+invariants:
+  # Authentication & Security
+  - id: auth.rls_required
+    level: critical
+    domain: auth
+    statement: "All database tables MUST have Row-Level Security (RLS) enabled"
+    rationale: "Multi-tenant architecture requires data isolation between organizations"
+    detection:
+      - "Check supabase-schema.sql for ALTER TABLE ... ENABLE ROW LEVEL SECURITY"
+
+  - id: auth.org_isolation
+    level: critical
+    domain: auth
+    statement: "Users can ONLY access data belonging to their organization"
+    rationale: "Prevents cross-tenant data leakage"
+    detection:
+      - "All RLS policies must filter by get_user_org_id()"
+
+  - id: auth.no_client_secrets
+    level: critical
+    domain: auth
+    statement: "Service role keys and secrets must NEVER be exposed to client code"
+    rationale: "Service keys bypass RLS and grant full database access"
+    detection:
+      - "grep -r 'SUPABASE_SERVICE_ROLE' --include='*.tsx' --include='*.ts' src/"
+
+  # Database
+  - id: db.supabase_only
+    level: critical
+    domain: organizations
+    statement: "All database access MUST go through Supabase client, never raw SQL in frontend"
+    rationale: "Ensures RLS policies are enforced and auth context is preserved"
+    detection:
+      - "No direct PostgreSQL connections in client code"
+
+  - id: db.uuid_primary_keys
+    level: high
+    domain: organizations
+    statement: "All tables must use UUID primary keys with uuid_generate_v4()"
+    rationale: "Consistent ID format, no sequential exposure, works across systems"
+    detection:
+      - "Check schema for id UUID PRIMARY KEY DEFAULT uuid_generate_v4()"
+
+  # Orders & Processing
+  - id: orders.dual_visibility
+    level: critical
+    domain: orders
+    statement: "Processing orders must be visible to BOTH producer AND processor organizations"
+    rationale: "Core business requirement - both parties need to track the order"
+    detection:
+      - "RLS policy allows SELECT where producer_id OR processor_id matches user org"
+
+  - id: orders.no_orphans
+    level: high
+    domain: orders
+    statement: "Processing orders must always reference valid producer_id and processor_id"
+    rationale: "Orders without valid parties cannot be tracked or completed"
+    detection:
+      - "Foreign key constraints on processing_orders table"
+
+  - id: orders.stage_progression
+    level: high
+    domain: orders
+    statement: "Processing stage must follow valid progression: pending -> received -> hanging -> cutting -> wrapping -> freezing -> ready -> picked_up"
+    rationale: "Prevents invalid state transitions and maintains workflow integrity"
+    detection:
+      - "Check for processing_stage enum enforcement"
+
+  # Cut Sheets
+  - id: cutsheets.order_linked
+    level: high
+    domain: cutsheets
+    statement: "Cut sheets for active orders must be linked to a processing_order_id"
+    rationale: "Orphan cut sheets create confusion about which order they apply to"
+    detection:
+      - "cut_sheets.processing_order_id NOT NULL for non-templates"
+
+  # Scheduling
+  - id: scheduling.capacity_check
+    level: high
+    domain: scheduling
+    statement: "Bookings must not exceed calendar slot capacity"
+    rationale: "Over-booking creates operational chaos for processors"
+    detection:
+      - "booked_count <= capacity constraint or check in booking logic"
+
+  - id: scheduling.no_past_booking
+    level: medium
+    domain: scheduling
+    statement: "Cannot book calendar slots in the past"
+    rationale: "Historical slots are for records only"
+    detection:
+      - "date >= CURRENT_DATE check in booking logic"
+
+  # Messaging
+  - id: messaging.party_only
+    level: critical
+    domain: messaging
+    statement: "Messages can only be read by sender and recipient organizations"
+    rationale: "Privacy between business parties"
+    detection:
+      - "RLS policy restricts to sender_org_id OR recipient_org_id"
+
+  # API & Security
+  - id: api.auth_required
+    level: critical
+    domain: auth
+    statement: "All API routes (except auth endpoints) must verify authentication"
+    rationale: "Prevents unauthorized access to protected resources"
+    detection:
+      - "getServerSession or auth check at top of API routes"
+
+  - id: api.input_validation
+    level: high
+    domain: auth
+    statement: "All user input must be validated before database operations"
+    rationale: "Prevents injection attacks and data corruption"
+    detection:
+      - "zod or similar validation on API inputs"
+
+  # Frontend
+  - id: ui.loading_states
+    level: medium
+    domain: auth
+    statement: "All async operations must show loading states"
+    rationale: "User experience - prevents confusion during network operations"
+    detection:
+      - "isLoading or pending state in data fetching components"
+
+  - id: ui.error_handling
+    level: medium
+    domain: auth
+    statement: "All API calls must handle error states gracefully"
+    rationale: "Users should never see raw error messages or blank screens"
+    detection:
+      - "try/catch or error boundaries around async operations"

@@ -1,0 +1,155 @@
+# Steakholders Development Frustrations
+# Pain points, friction areas, and lessons learned
+
+frustrations:
+  # ============================================
+  # SUPABASE
+  # ============================================
+
+  FRUST-001:
+    category: supabase
+    severity: high
+    title: RLS policies extremely difficult to debug
+    description: |
+      Row Level Security policies can silently fail with generic error messages.
+      Even when policies appear correct (verified via pg_policies), inserts
+      can still fail. No way to see WHY a policy is rejecting a request.
+    symptoms:
+      - "new row violates row-level security policy" with no details
+      - Policy shows correct WITH CHECK but still fails
+      - Works when RLS disabled, fails when enabled
+    workarounds:
+      - Use service role key in server actions to bypass RLS
+      - Temporarily disable RLS to verify it's the issue
+      - Query pg_policies to verify policy state
+    wish_list:
+      - Better error messages showing which policy failed
+      - Debug mode that logs policy evaluations
+      - Test harness for RLS policies
+
+  FRUST-002:
+    category: supabase
+    severity: high
+    title: Auth email rate limits too restrictive
+    description: |
+      Supabase's built-in email service has ~4 emails/hour limit per PROJECT.
+      This makes testing signup flows nearly impossible - a few test accounts
+      and you're locked out for an hour.
+    impact: |
+      Significantly slows down development when testing auth flows.
+      Forces custom SMTP setup even for development.
+    workaround: Configure Resend as custom SMTP provider
+    wish_list:
+      - Higher limits for development/testing
+      - Per-email-address limits instead of per-project
+      - Clear indication when rate limited
+
+  FRUST-003:
+    category: supabase
+    severity: medium
+    title: SMTP configuration doesn't seem to work
+    description: |
+      Despite correct SMTP settings (verified Resend works via API),
+      Supabase Auth doesn't appear to use the custom SMTP at all.
+      No emails show up in Resend dashboard from Supabase.
+    status: unresolved
+    attempted:
+      - Verified API key with curl test
+      - Tried ports 465 and 587
+      - Toggled SMTP on/off
+      - Used onboarding@resend.dev as sender
+
+  FRUST-004:
+    category: supabase
+    severity: medium
+    title: Generated types don't match runtime behavior
+    description: |
+      Supabase generates TypeScript types that don't always match what
+      the API actually returns. Requires frequent use of `as never` or
+      explicit type assertions.
+    examples:
+      - Query returns different shape than types suggest
+      - Insert operations typed incorrectly
+      - Single() returns different type than expected
+
+  FRUST-005:
+    category: supabase
+    severity: low
+    title: No trigger on auth.users by default
+    description: |
+      Supabase doesn't automatically create a public.users record when
+      someone signs up. This is a common pattern but requires manual
+      trigger setup.
+    resolution: Created handle_new_user() trigger manually
+
+  # ============================================
+  # NEXT.JS / VERCEL
+  # ============================================
+
+  FRUST-006:
+    category: nextjs
+    severity: medium
+    title: Server actions require all exports to be async
+    description: |
+      Files marked 'use server' cannot export synchronous functions,
+      even if they're pure utility functions that don't need async.
+      Forces splitting code into multiple files.
+    workaround: Move sync utilities to separate files without 'use server'
+
+  FRUST-007:
+    category: nextjs
+    severity: low
+    title: Environment variables must be prefixed for client
+    description: |
+      NEXT_PUBLIC_ prefix requirement makes it easy to accidentally
+      expose server-only variables or forget to add prefix for client vars.
+
+  # ============================================
+  # DEVELOPMENT WORKFLOW
+  # ============================================
+
+  FRUST-008:
+    category: workflow
+    severity: medium
+    title: Local vs production database drift
+    description: |
+      Migrations applied locally may not be in production Supabase.
+      No automatic sync - must manually run SQL in dashboard or use
+      Supabase CLI.
+    wish_list:
+      - Automatic migration sync to production
+      - Clear indication of migration status per environment
+
+  FRUST-009:
+    category: workflow
+    severity: low
+    title: Multiple Supabase helper functions may not exist in prod
+    description: |
+      Helper functions like is_authenticated() created locally might
+      not exist in production database, causing RLS policies to fail.
+    lesson: Use direct auth.uid() checks instead of helper functions
+
+  # ============================================
+  # LESSONS LEARNED
+  # ============================================
+
+lessons_learned:
+  - title: Always use auth.uid() IS NOT NULL instead of helper functions
+    context: RLS policies
+    reason: Helper functions may not exist in all environments
+
+  - title: Server actions are the safest way to bypass RLS issues
+    context: Database operations
+    reason: Service role key is safe on server, never exposed to client
+
+  - title: Create auth.users trigger early in project setup
+    context: User management
+    reason: Public user records needed for most app functionality
+
+  - title: Set up custom SMTP immediately, not just for production
+    context: Email/Auth
+    reason: Supabase rate limits make testing impossible otherwise
+
+  - title: Check pg_policies to verify RLS state
+    context: Debugging
+    reason: Policy names and conditions may differ from migration files
