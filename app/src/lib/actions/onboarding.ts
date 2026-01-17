@@ -4,6 +4,17 @@ import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import type { OrganizationType } from '@/types/database'
 
+export async function validateInviteCode(code: string): Promise<{ valid: boolean }> {
+  const validCode = process.env.INVITE_CODE
+
+  if (!validCode) {
+    // If no invite code is set, allow all signups (for development)
+    return { valid: true }
+  }
+
+  return { valid: code === validCode }
+}
+
 interface OnboardingData {
   type: OrganizationType
   name: string

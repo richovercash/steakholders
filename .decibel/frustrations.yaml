@@ -52,12 +52,15 @@ frustrations:
       Despite correct SMTP settings (verified Resend works via API),
       Supabase Auth doesn't appear to use the custom SMTP at all.
       No emails show up in Resend dashboard from Supabase.
-    status: unresolved
-    attempted:
-      - Verified API key with curl test
-      - Tried ports 465 and 587
-      - Toggled SMTP on/off
-      - Used onboarding@resend.dev as sender
+    status: resolved
+    root_causes_discovered:
+      - onboarding@resend.dev only works for Supabase team member emails
+      - Custom domain required for sending to external addresses
+      - Resend API keys can be domain-scoped (must be unrestricted or match sender domain)
+      - SMTP username must be literally "resend", not the API key or email
+    resolution: |
+      Set up custom domain (steakholders.us.com) with proper DNS records,
+      created unrestricted API key, configured SMTP with correct credentials.
 
   FRUST-004:
     category: supabase
@@ -153,3 +156,31 @@ lessons_learned:
   - title: Check pg_policies to verify RLS state
     context: Debugging
     reason: Policy names and conditions may differ from migration files
+
+  - title: Resend SMTP requires custom domain for non-team emails
+    context: Email/Auth
+    reason: |
+      onboarding@resend.dev only sends to Supabase project team members.
+      For production or testing with external emails, must set up verified
+      custom domain in Resend with proper DNS records (DKIM, SPF, MX, DMARC).
+
+  - title: Resend SMTP username is literally "resend"
+    context: Email/Auth
+    reason: |
+      Common mistake is to use API key or email as username. For Resend SMTP:
+      - Username: resend (the word)
+      - Password: your API key (re_...)
+
+  - title: Resend API keys can be domain-scoped
+    context: Email/Auth
+    reason: |
+      If API key is restricted to specific domain, emails from other domains
+      will fail with "535 API key not found". Use unrestricted key or ensure
+      sender domain matches key scope.
+
+  - title: Auth triggers need SECURITY DEFINER and proper grants
+    context: Database
+    reason: |
+      Triggers on auth.users run as supabase_auth_admin role. Function must
+      have SECURITY DEFINER and explicit GRANT to supabase_auth_admin for
+      inserting into public tables.

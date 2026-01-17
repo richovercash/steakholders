@@ -9,25 +9,34 @@ issues:
   ISS-001:
     title: Supabase SMTP not sending auth emails
     severity: critical
-    status: investigating
+    status: resolved
     created: 2026-01-16
+    resolved: 2026-01-16
     epic: EP-009
     description: |
       Email confirmation emails not being sent via Supabase Auth.
       Resend API works directly (curl test successful), but Supabase
       SMTP integration doesn't appear to be calling Resend at all.
-    symptoms:
-      - No emails in Resend dashboard from Supabase
-      - Signup works but no confirmation email
-      - Was working yesterday, stopped today
-    attempted_fixes:
-      - Verified Resend API key works (curl test)
-      - Configured SMTP settings (smtp.resend.com:587)
-      - Using onboarding@resend.dev as sender
-    next_steps:
-      - Check Supabase Auth logs for errors
-      - Verify SMTP toggle is actually enabled
-      - Consider Supabase rate limiting on project level
+    root_causes:
+      - Cannot use onboarding@resend.dev - must have custom domain for non-team emails
+      - Resend API key was scoped to specific domain, not open
+      - SMTP username must be literally "resend", not the API key
+    fix: |
+      1. Purchased custom domain steakholders.us.com
+      2. Added DNS records to Porkbun (DKIM, SPF, MX, DMARC)
+      3. Verified domain in Resend dashboard
+      4. Created unrestricted API key in Resend
+      5. Configured Supabase SMTP:
+         - Host: smtp.resend.com
+         - Port: 465
+         - Username: resend
+         - Password: [Resend API key]
+         - Sender: noreply@steakholders.us.com
+    verification: |
+      Tested signup with test-4-steak.nintendo705@passinbox.com
+      - Confirmation email sent successfully
+      - User verified email within 24 seconds
+      - Full auth flow working end-to-end
 
   ISS-002:
     title: RLS policy blocks organization INSERT despite correct policy
@@ -77,13 +86,33 @@ issues:
     description: |
       New signups created auth.users record but no public.users record,
       causing onboarding update to fail silently.
+    root_cause: |
+      Original trigger existed but wasn't firing properly. Possibly due to
+      missing SECURITY DEFINER or permission issues with supabase_auth_admin role.
     fix: |
-      Created trigger on auth.users to automatically create public.users
-      record on signup with handle_new_user() function.
+      Recreated trigger with proper permissions via migration:
+      - Dropped and recreated handle_new_user() with SECURITY DEFINER
+      - Added ON CONFLICT DO NOTHING for idempotency
+      - Granted permissions to supabase_auth_admin role
+      - Backfilled 3 missing user records
     sql_applied: |
+      CREATE OR REPLACE FUNCTION public.handle_new_user()
+      RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER
+      SET search_path = public AS $$
+      BEGIN
+        INSERT INTO public.users (auth_id, email, full_name)
+        VALUES (NEW.id, NEW.email, COALESCE(NEW.raw_user_meta_data->>'full_name', split_part(NEW.email, '@', 1)))
+        ON CONFLICT (auth_id) DO NOTHING;
+        RETURN NEW;
+      END;
+      $$;
+
       CREATE TRIGGER on_auth_user_created
         AFTER INSERT ON auth.users
         FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+      GRANT USAGE ON SCHEMA public TO supabase_auth_admin;
+      GRANT ALL ON public.users TO supabase_auth_admin;
 
   # ============================================
   # MEDIUM PRIORITY

@@ -9,12 +9,14 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import type { InsertTables } from '@/types/database'
+import { validateInviteCode } from '@/lib/actions/onboarding'
 
 export default function SignUpPage() {
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [inviteCode, setInviteCode] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
@@ -24,6 +26,14 @@ export default function SignUpPage() {
     e.preventDefault()
     setLoading(true)
     setError(null)
+
+    // Validate invite code first
+    const { valid } = await validateInviteCode(inviteCode)
+    if (!valid) {
+      setError('Invalid invite code')
+      setLoading(false)
+      return
+    }
 
     if (password !== confirmPassword) {
       setError('Passwords do not match')
@@ -135,6 +145,17 @@ export default function SignUpPage() {
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="inviteCode">Invite Code</Label>
+            <Input
+              id="inviteCode"
+              type="text"
+              placeholder="Enter your invite code"
+              value={inviteCode}
+              onChange={(e) => setInviteCode(e.target.value)}
               required
             />
           </div>
