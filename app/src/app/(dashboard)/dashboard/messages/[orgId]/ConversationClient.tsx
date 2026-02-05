@@ -12,6 +12,7 @@ import {
   markMessagesAsRead,
   getNewMessages,
 } from '@/lib/actions/messages'
+import { MESSAGE_POLL_INTERVAL_MS } from '@/lib/constants'
 
 interface MessageWithSender extends Message {
   sender: { full_name: string } | null
@@ -25,8 +26,6 @@ interface ConversationClientProps {
   userId: string
   initialMessages: MessageWithSender[]
 }
-
-const POLL_INTERVAL = 5000 // Poll every 5 seconds
 
 export default function ConversationClient({
   partnerOrgId,
@@ -84,7 +83,7 @@ export default function ConversationClient({
 
   // Set up polling interval
   useEffect(() => {
-    const intervalId = setInterval(pollForMessages, POLL_INTERVAL)
+    const intervalId = setInterval(pollForMessages, MESSAGE_POLL_INTERVAL_MS)
     return () => clearInterval(intervalId)
   }, [pollForMessages])
 

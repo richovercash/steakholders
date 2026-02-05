@@ -19,6 +19,12 @@ import {
   deleteNotification,
 } from '@/lib/notifications/actions'
 import type { NotificationWithRelations, NotificationType } from '@/types/database'
+import {
+  SECONDS_PER_MINUTE,
+  SECONDS_PER_HOUR,
+  SECONDS_PER_DAY,
+  SECONDS_PER_WEEK,
+} from '@/lib/constants'
 
 function getNotificationIcon(type: string) {
   switch (type as NotificationType) {
@@ -52,10 +58,10 @@ function formatDate(dateString: string): string {
   const now = new Date()
   const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
 
-  if (diffInSeconds < 60) return 'just now'
-  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`
-  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`
-  if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} days ago`
+  if (diffInSeconds < SECONDS_PER_MINUTE) return 'just now'
+  if (diffInSeconds < SECONDS_PER_HOUR) return `${Math.floor(diffInSeconds / SECONDS_PER_MINUTE)} minutes ago`
+  if (diffInSeconds < SECONDS_PER_DAY) return `${Math.floor(diffInSeconds / SECONDS_PER_HOUR)} hours ago`
+  if (diffInSeconds < SECONDS_PER_WEEK) return `${Math.floor(diffInSeconds / SECONDS_PER_DAY)} days ago`
 
   return date.toLocaleDateString('en-US', {
     month: 'short',
