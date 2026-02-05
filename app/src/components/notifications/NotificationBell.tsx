@@ -16,6 +16,13 @@ import {
 import { getNotifications, getUnreadCount, markAsRead, markAllAsRead } from '@/lib/notifications/actions'
 import { useRealtimeNotifications } from '@/lib/notifications/useRealtimeNotifications'
 import type { NotificationWithRelations, NotificationType, Notification } from '@/types/database'
+import {
+  SECONDS_PER_MINUTE,
+  SECONDS_PER_HOUR,
+  SECONDS_PER_DAY,
+  SECONDS_PER_WEEK,
+  NOTIFICATION_POLL_INTERVAL_MS,
+} from '@/lib/constants'
 
 function getNotificationIcon(type: string) {
   switch (type as NotificationType) {
@@ -49,10 +56,10 @@ function formatTimeAgo(dateString: string): string {
   const now = new Date()
   const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
 
-  if (diffInSeconds < 60) return 'just now'
-  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`
-  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`
-  if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`
+  if (diffInSeconds < SECONDS_PER_MINUTE) return 'just now'
+  if (diffInSeconds < SECONDS_PER_HOUR) return `${Math.floor(diffInSeconds / SECONDS_PER_MINUTE)}m ago`
+  if (diffInSeconds < SECONDS_PER_DAY) return `${Math.floor(diffInSeconds / SECONDS_PER_HOUR)}h ago`
+  if (diffInSeconds < SECONDS_PER_WEEK) return `${Math.floor(diffInSeconds / SECONDS_PER_DAY)}d ago`
   return date.toLocaleDateString()
 }
 
@@ -114,7 +121,7 @@ export function NotificationBell({ initialCount = 0, initialNotifications = [], 
     const interval = setInterval(async () => {
       const count = await getUnreadCount()
       setUnreadCount(count)
-    }, 60000) // Every 60 seconds (increased since we have realtime)
+    }, NOTIFICATION_POLL_INTERVAL_MS)
 
     return () => clearInterval(interval)
   }, [])

@@ -7,9 +7,7 @@ import type {
   ToastActionElement,
   ToastProps,
 } from "@/components/ui/toast"
-
-const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 1000000
+import { TOAST_LIMIT, TOAST_REMOVE_DELAY_MS } from "@/lib/constants"
 
 type ToasterToast = ToastProps & {
   id: string
@@ -70,7 +68,7 @@ const addToRemoveQueue = (toastId: string) => {
       type: "REMOVE_TOAST",
       toastId: toastId,
     })
-  }, TOAST_REMOVE_DELAY)
+  }, TOAST_REMOVE_DELAY_MS)
 
   toastTimeouts.set(toastId, timeout)
 }

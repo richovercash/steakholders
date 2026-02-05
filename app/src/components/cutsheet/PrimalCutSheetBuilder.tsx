@@ -470,13 +470,21 @@ function PrimalSection({
   onSplitAllocationChange: (cutId: string, percentage: number) => void
 }) {
   const [isOpen, setIsOpen] = useState(true)
-  const selectedIds = new Set(selectedCuts.map(s => s.cutId))
+
+  // Memoize selectedIds to prevent useMemo dependency changes on every render
+  const selectedIds = useMemo(
+    () => new Set(selectedCuts.map(s => s.cutId)),
+    [selectedCuts]
+  )
 
   // Filter out disabled cuts from processor config
-  const enabledChoices = primal.choices.filter(c => {
-    const filteredCut = c as FilteredCutChoice
-    return !filteredCut.disabled
-  })
+  const enabledChoices = useMemo(
+    () => primal.choices.filter(c => {
+      const filteredCut = c as FilteredCutChoice
+      return !filteredCut.disabled
+    }),
+    [primal.choices]
+  )
 
   // Get all selected cuts in this primal (main + subsections) - for split allocation
   const selectedCutsInPrimal = useMemo(() => {
